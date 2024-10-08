@@ -1,0 +1,130 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int       @id @default(autoincrement())
+  email     String    @unique
+  password  String
+  firstName String
+  lastName  String
+  role      String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  shipments Shipment[]
+}
+
+model Shipment {
+  id                Int      @id @default(autoincrement())
+  containerNo       String
+  truckNo           String
+  lotNo             String
+  description       String   @db.Text
+  quantity          Int
+  quantityUnit      String
+  netWeight         Decimal  @db.Decimal(10, 2)
+  netWeightUnit     String
+  amount            Decimal  @db.Decimal(10, 2)
+  price             Decimal  @db.Decimal(10, 2)
+  consignee         String
+  date              DateTime @default(now())
+  status            String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  userId            Int
+  user              User     @relation(fields: [userId], references: [id])
+  loadingTallySheet LoadingTallySheet?
+  invoice           Invoice?
+  vgm               VGM?
+  stuffingReport    StuffingReport?
+}
+
+
+model LoadingTallySheet {
+  id           Int      @id @default(autoincrement())
+  shipmentId   Int      @unique
+  loadingDay   DateTime
+  sl           String
+  forwarder    String
+  rssSsrwSprw  String
+  plateNo      String
+  tare         Decimal  @db.Decimal(10, 2)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  shipment     Shipment @relation(fields: [shipmentId], references: [id])
+}
+
+model Invoice {
+  id                 Int      @id @default(autoincrement())
+  shipmentId         Int      @unique
+  seller             String
+  sellerAddress      String   @db.Text
+  consignee          String
+  consigneeAddress   String   @db.Text
+  billOfLadingNo     String
+  amountWords        String   @db.Text
+  authorizedSignature String
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  shipment           Shipment @relation(fields: [shipmentId], references: [id])
+}
+
+model VGM {
+  id               Int      @id @default(autoincrement())
+  shipmentId       Int      @unique
+  bookingBlNumber  String
+  containerTypeSize String
+  vgmKgs           Decimal  @db.Decimal(10, 2)
+  cargoGwKgs       Decimal  @db.Decimal(10, 2)
+  method           String
+  remarks          String?  @db.Text
+  vesselName       String
+  voyageNumber     String
+  authorizedPerson String
+  position         String
+  contactNumber    String
+  signatureDate    DateTime
+  kmaApprovalNo    String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  shipment         Shipment @relation(fields: [shipmentId], references: [id])
+}
+
+model StuffingReport {
+  id               Int      @id @default(autoincrement())
+  shipmentId       Int      @unique
+  client           String
+  mandate          String   @db.Text
+  product          String
+  packing          String
+  vesselName       String
+  billOfLadingNo   String
+  place            String
+  stuffingStart    DateTime
+  stuffingEnd      DateTime
+  tempSealTime     DateTime
+  finalSealTime    DateTime
+  containerCondition String  @db.Text
+  illyId           String
+  authorizedPerson String
+  signatureDate    DateTime
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  shipment         Shipment @relation(fields: [shipmentId], references: [id])
+}
+
+model Container {
+  id            Int      @id @default(autoincrement())
+  containerNo   String   @unique
+  type          String
+  vgm           Float
+  cargoWeight   Float
+  tare          Float
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
