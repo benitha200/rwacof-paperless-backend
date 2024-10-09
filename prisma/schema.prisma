@@ -8,15 +8,19 @@ datasource db {
 }
 
 model User {
-  id        Int       @id @default(autoincrement())
-  email     String    @unique
-  password  String
-  firstName String
-  lastName  String
-  role      String
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  shipments Shipment[]
+  id             Int       @id @default(autoincrement())
+  email          String    @unique
+  password       String
+  firstName      String
+  lastName       String
+  role           String
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  shipments      Shipment[]
+  preparedGRNs   GRN[]     @relation("PreparedGRNs")
+  checkedGRNs    GRN[]     @relation("CheckedGRNs")
+  authorizedGRNs GRN[]     @relation("AuthorizedGRNs")
+  receivedGRNs   GRN[]     @relation("ReceivedGRNs")
 }
 
 model Shipment {
@@ -127,4 +131,29 @@ model Container {
   tare          Float
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+}
+
+model GRN {
+  id                Int      @id @default(autoincrement())
+  receivedDate      DateTime
+  supplierName      String
+  supplierAddress   String   @db.Text
+  productDescription String
+  quantity          Int
+  quantityUnit      String
+  totalWeight       Decimal  @db.Decimal(10, 2)
+  weightUnit        String
+  qualityGrade      String
+  preparedById      Int
+  preparedBy        User     @relation("PreparedGRNs", fields: [preparedById], references: [id])
+  checkedById       Int
+  checkedBy         User     @relation("CheckedGRNs", fields: [checkedById], references: [id])
+  authorizedById    Int
+  authorizedBy      User     @relation("AuthorizedGRNs", fields: [authorizedById], references: [id])
+  receivedById      Int
+  receivedBy        User     @relation("ReceivedGRNs", fields: [receivedById], references: [id])
+  remarks           String?  @db.Text
+  status            String @default("Received")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 }

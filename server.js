@@ -26,6 +26,7 @@ const vgmRoutes = require('./routes/vgmRoutes');
 const stuffingReportRoutes = require('./routes/stuffingReportRoutes');
 const containerRoutes = require('./routes/containerRoutes');
 const userRoutes = require('./routes/UserRoutes');
+const grnRoutes = require('./routes/grnRoutes');
 
 app.use('/api/shipments', shipmentRoutes);
 app.use('/api/loading-tally-sheets', loadingTallySheetRoutes);
@@ -34,6 +35,7 @@ app.use('/api/vgms', vgmRoutes);
 app.use('/api/stuffing-reports', stuffingReportRoutes);
 app.use('/api/containers', containerRoutes);
 app.use('/api/users',userRoutes );
+app.use('/api/grn',grnRoutes);
 
 // Error handling middleware
 const errorHandler = (err, req, res, next) => {
