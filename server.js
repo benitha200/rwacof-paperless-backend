@@ -4,6 +4,7 @@ const morgan = require('morgan');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const app = express();
+require('dotenv').config();
 
 // Middleware
 app.use(cors());

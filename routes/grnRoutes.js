@@ -3,61 +3,124 @@ const router = express.Router();
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { body, validationResult } = require('express-validator');
+const nodemailer = require('nodemailer');
+require('dotenv').config();
+const authenticateUser=require('./UserRoutes');
 
-// Validation middleware
+
 const validateGRN = [
   body('receivedDate').isISO8601().toDate().withMessage('Invalid date format'),
   body('supplierName').notEmpty().withMessage('Supplier name is required'),
   body('supplierAddress').notEmpty().withMessage('Supplier address is required'),
-  body('productDescription').notEmpty().withMessage('Product description is required'),
   body('quantity').isInt().withMessage('Quantity must be an integer'),
   body('quantityUnit').notEmpty().withMessage('Quantity unit is required'),
   body('totalWeight').isFloat().withMessage('Total weight must be a number'),
   body('weightUnit').notEmpty().withMessage('Weight unit is required'),
   body('qualityGrade').notEmpty().withMessage('Quality grade is required'),
-  body('preparedById').isInt().withMessage('Prepared by ID must be an integer'),
-  body('checkedById').isInt().withMessage('Checked by ID must be an integer'),
-  body('authorizedById').isInt().withMessage('Authorized by ID must be an integer'),
-  body('receivedById').isInt().withMessage('Received by ID must be an integer'),
+  body('status').isIn(['pending','Recieved', 'approved', 'rejected', 'completed']).withMessage('Invalid status'),
+  body('currentStep').isInt({ min: 0, max: 4 }).withMessage('Invalid current step'),
 ];
 
-// Create GRN
-router.post('/', validateGRN, async (req, res) => {
+// router.use(authenticateUser);
+
+// Create or update GRN
+router.post('/',authenticateUser, async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
   }
 
   try {
-    const grn = await prisma.gRN.create({
-      data: {
-        receivedDate: new Date(req.body.receivedDate),
-        supplierName: req.body.supplierName,
-        supplierAddress: req.body.supplierAddress,
-        productDescription: req.body.productDescription,
-        quantity: parseInt(req.body.quantity),
-        quantityUnit: req.body.quantityUnit,
-        totalWeight: parseFloat(req.body.totalWeight),
-        weightUnit: req.body.weightUnit,
-        qualityGrade: req.body.qualityGrade,
-        preparedById: parseInt(req.body.preparedById),
-        checkedById: parseInt(req.body.checkedById),
-        authorizedById: parseInt(req.body.authorizedById),
-        receivedById: parseInt(req.body.receivedById),
-        remarks: req.body.remarks,
-      },
-    });
+    const { id, ...grnData } = req.body;
+    let grn;
+
+    const commonData = {
+      receivedDate: new Date(grnData.receivedDate),
+      supplierName: grnData.supplierName,
+      supplierAddress: grnData.supplierAddress,
+      plate_no: grnData.plate_no,
+      wbridgeRef: grnData.wbridgeRef,
+      moisture: parseFloat(grnData.moisture),
+      parch: grnData.parch ? parseFloat(grnData.parch) : null,
+      coffee_type: grnData.coffee_type,
+      bags: parseInt(grnData.bags),
+      quantity: parseInt(grnData.quantity),
+      totalWeight: parseFloat(grnData.totalWeight),
+      weightUnit: grnData.weightUnit,
+      quantityUnit: grnData.quantityUnit,
+      lessNoOfBags: parseInt(grnData.lessNoOfBags) || 0,
+      subGrossKg: parseInt(grnData.subGrossKg),
+      lessMoistureKg: parseInt(grnData.lessMoistureKg) || 0,
+      lessQualityKg: parseInt(grnData.lessQualityKg) || 0,
+      netWeightKg: parseInt(grnData.netWeightKg),
+      cheque_in_favor_of: grnData.cheque_in_favor_of,
+      payment_weight: grnData.payment_weight,
+      payment_quantity: parseInt(grnData.payment_quantity),
+      payment_rate: parseInt(grnData.payment_rate),
+      payment_amount: parseInt(grnData.payment_amount),
+      paymentDate: new Date(grnData.paymentDate),
+      drAc: grnData.drAc ? parseInt(grnData.drAc) : null,
+      qualityGrade: grnData.qualityGrade,
+      rate: parseInt(grnData.rate),
+      remarks: grnData.remarks,
+      status: grnData.status,
+      currentStep: parseInt(grnData.currentStep),
+    };
+
+    if (id) {
+      // Update existing GRN
+      grn = await prisma.grns.update({
+        where: { id: parseInt(id) },
+        data: {
+          ...commonData,
+          [getCurrentStepField(grnData.currentStep)]: { connect: { id: req.user.id } },
+        },
+      });
+    } else {
+      grn = await prisma.grns.create({
+        data: {
+         ...commonData,
+          preparedBy: { connect: { id: req.user.id } },
+        },
+      })
+    }
+
+    // Send email to next person in workflow if not the last step
+    if (grnData.currentStep < 4) {
+      await sendEmailToNextPerson(grnData.currentStep + 1, grn.id);
+    }
+
     res.status(201).json(grn);
   } catch (error) {
-    console.error('Error creating GRN:', error);
-    res.status(500).json({ message: 'Error creating GRN', error: error.message });
+    console.error('Error creating/updating GRN:', error);
+    res.status(500).json({ message: 'Error creating/updating GRN', error: error.message });
   }
 });
 
-// Get all GRNs
-router.get('/', async (req, res) => {
+// Get GRN by ID
+router.get('/:id',  async (req, res) => {
   try {
-    const grns = await prisma.gRN.findMany();
+    const grn = await prisma.grns.findUnique({
+      where: { id: parseInt(req.params.id) },
+      include: {
+        preparedBy: true,
+        checkedBy: true,
+        authorizedBy: true,
+        receivedBy: true,
+      },
+    });
+    if (!grn) return res.status(404).json({ error: 'GRN not found' });
+    res.json(grn);
+  } catch (error) {
+    console.error('Error fetching GRN:', error);
+    res.status(500).json({ message: 'Error fetching GRN', error: error.message });
+  }
+});
+
+// List all GRNs (with optional filtering)
+router.get('/',  async (req, res) => {
+  try {
+    const grns = await prisma.grns.findMany();
     res.json(grns);
   } catch (error) {
     console.error('Error fetching GRNs:', error);
@@ -65,61 +128,10 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Get a single GRN by ID
-router.get('/:id', async (req, res) => {
-  try {
-    const grn = await prisma.gRN.findUnique({
-      where: { id: parseInt(req.params.id) },
-    });
-    if (grn) {
-      res.json(grn);
-    } else {
-      res.status(404).json({ message: 'GRN not found' });
-    }
-  } catch (error) {
-    console.error('Error fetching GRN:', error);
-    res.status(500).json({ message: 'Error fetching GRN', error: error.message });
-  }
-});
-
-// Update a GRN
-router.put('/:id', validateGRN, async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
-  }
-
-  try {
-    const updatedGrn = await prisma.gRN.update({
-      where: { id: parseInt(req.params.id) },
-      data: {
-        receivedDate: new Date(req.body.receivedDate),
-        supplierName: req.body.supplierName,
-        supplierAddress: req.body.supplierAddress,
-        productDescription: req.body.productDescription,
-        quantity: parseInt(req.body.quantity),
-        quantityUnit: req.body.quantityUnit,
-        totalWeight: parseFloat(req.body.totalWeight),
-        weightUnit: req.body.weightUnit,
-        qualityGrade: req.body.qualityGrade,
-        preparedById: parseInt(req.body.preparedById),
-        checkedById: parseInt(req.body.checkedById),
-        authorizedById: parseInt(req.body.authorizedById),
-        receivedById: parseInt(req.body.receivedById),
-        remarks: req.body.remarks,
-      },
-    });
-    res.json(updatedGrn);
-  } catch (error) {
-    console.error('Error updating GRN:', error);
-    res.status(500).json({ message: 'Error updating GRN', error: error.message });
-  }
-});
-
 // Delete a GRN
-router.delete('/:id', async (req, res) => {
+router.delete('/:id',  async (req, res) => {
   try {
-    await prisma.gRN.delete({
+    await prisma.grns.delete({
       where: { id: parseInt(req.params.id) },
     });
     res.json({ message: 'GRN deleted successfully' });
@@ -128,5 +140,70 @@ router.delete('/:id', async (req, res) => {
     res.status(500).json({ message: 'Error deleting GRN', error: error.message });
   }
 });
+
+// Helper function to get the current step field name
+function getCurrentStepField(currentStep) {
+  const stepFields = ['preparedBy', 'checkedBy', 'authorizedBy', 'receivedBy'];
+  return stepFields[currentStep];
+}
+
+// Helper function to send email to next person in workflow
+async function sendEmailToNextPerson(nextStep, grnId) {
+  const roles = ['WeightBridgeManager', 'QualityManager', 'COO', 'ManagingDirector', 'Finance'];
+  const nextRole = roles[nextStep];
+
+  try {
+    const user = await prisma.user.findFirst({
+      where: { role: nextRole },
+    });
+
+    if (!user) {
+      console.error(`User with role ${nextRole} not found`);
+      return;
+    }
+
+    console.log('Attempting to create transporter...');
+    console.log('EMAIL_NAME:', process.env.EMAIL_NAME);
+    console.log('EMAIL_PASSWORD length:', process.env.EMAIL_PASSWORD ? process.env.EMAIL_PASSWORD.length : 0);
+
+    const transporter = nodemailer.createTransport({
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true,
+      auth: {
+        user: "benithalouange@gmail.com",
+        pass: "evzc oezs lslz mhoc",
+      },
+      debug: true, // Enable debug logs
+      logger: true // Log to console
+    });
+
+    console.log('Transporter created, attempting to verify...');
+
+    try {
+      await transporter.verify();
+      console.log('Transporter verified successfully');
+    } catch (verifyError) {
+      console.error('Transporter verification failed:', verifyError);
+      throw verifyError;
+    }
+
+    console.log('Attempting to send email...');
+
+    const info = await transporter.sendMail({
+      from: `"GRN System" <${process.env.EMAIL_NAME}>`,
+      to: user.email,
+      subject: `GRN ${grnId} Ready for Your Approval`,
+      text: `Please review and approve GRN ${grnId} in the system.`,
+      html: `<p>Please review and approve GRN ${grnId} in the system.</p>`,
+    });
+
+    console.log('Message sent: %s', info.messageId);
+  } catch (error) {
+    console.error('Detailed error in sendEmailToNextPerson:', error);
+    throw error;
+  }
+}
+
 
 module.exports = router;

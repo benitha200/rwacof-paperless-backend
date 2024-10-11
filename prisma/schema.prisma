@@ -17,10 +17,10 @@ model User {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
   shipments      Shipment[]
-  preparedGRNs   GRN[]     @relation("PreparedGRNs")
-  checkedGRNs    GRN[]     @relation("CheckedGRNs")
-  authorizedGRNs GRN[]     @relation("AuthorizedGRNs")
-  receivedGRNs   GRN[]     @relation("ReceivedGRNs")
+  preparedGRNs   Grns[]     @relation("PreparedGRNs")
+  checkedGRNs    Grns[]     @relation("CheckedGRNs")
+  authorizedGRNs Grns[]     @relation("AuthorizedGRNs")
+  receivedGRNs   Grns[]     @relation("ReceivedGRNs")
 }
 
 model Shipment {
@@ -133,27 +133,46 @@ model Container {
   updatedAt     DateTime @updatedAt
 }
 
-model GRN {
+model Grns {
   id                Int      @id @default(autoincrement())
   receivedDate      DateTime
   supplierName      String
   supplierAddress   String   @db.Text
-  productDescription String
+  plate_no          String
+  wbridgeRef        String?
+  moisture          Decimal  @db.Decimal(10, 2)
+  parch             Decimal? @db.Decimal(10, 2)
+  coffee_type       String
+  bags              Int
   quantity          Int
-  quantityUnit      String
-  totalWeight       Decimal  @db.Decimal(10, 2)
+  totalWeight       Int
   weightUnit        String
+  quantityUnit      String   @default("kgs")
+  lessNoOfBags      Int?     @default(0)
+  subGrossKg        Int
+  lessMoistureKg    Int?     @default(0)
+  lessQualityKg     Int?     @default(0)
+  netWeightKg       Int
+  cheque_in_favor_of String
+  payment_weight    String
+  payment_quantity  Int
+  payment_rate      Int
+  payment_amount    Int
+  paymentDate       DateTime
+  drAc              Int?
   qualityGrade      String
+  rate              Int
   preparedById      Int
   preparedBy        User     @relation("PreparedGRNs", fields: [preparedById], references: [id])
-  checkedById       Int
-  checkedBy         User     @relation("CheckedGRNs", fields: [checkedById], references: [id])
-  authorizedById    Int
-  authorizedBy      User     @relation("AuthorizedGRNs", fields: [authorizedById], references: [id])
-  receivedById      Int
-  receivedBy        User     @relation("ReceivedGRNs", fields: [receivedById], references: [id])
+  checkedById       Int?
+  checkedBy         User?    @relation("CheckedGRNs", fields: [checkedById], references: [id])
+  authorizedById    Int?
+  authorizedBy      User?    @relation("AuthorizedGRNs", fields: [authorizedById], references: [id])
+  receivedById      Int?
+  receivedBy        User?    @relation("ReceivedGRNs", fields: [receivedById], references: [id])
   remarks           String?  @db.Text
-  status            String @default("Received")
+  status            String   @default("Received")
+  currentStep       Int
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 }
