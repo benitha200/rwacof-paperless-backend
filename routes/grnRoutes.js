@@ -24,7 +24,80 @@ const validateGRN = [
 // router.use(authenticateUser);
 
 // Create or update GRN
-router.post('/',authenticateUser, async (req, res) => {
+// router.post('/',authenticateUser, async (req, res) => {
+//   const errors = validationResult(req);
+//   if (!errors.isEmpty()) {
+//     return res.status(400).json({ errors: errors.array() });
+//   }
+
+//   try {
+//     const { id, ...grnData } = req.body;
+//     let grn;
+
+//     const commonData = {
+//       receivedDate: new Date(grnData.receivedDate),
+//       supplierName: grnData.supplierName,
+//       supplierAddress: grnData.supplierAddress,
+//       plate_no: grnData.plate_no,
+//       wbridgeRef: grnData.wbridgeRef,
+//       moisture: parseFloat(grnData.moisture),
+//       parch: grnData.parch ? parseFloat(grnData.parch) : null,
+//       coffee_type: grnData.coffee_type,
+//       bags: parseInt(grnData.bags),
+//       quantity: parseInt(grnData.quantity),
+//       totalWeight: parseFloat(grnData.totalWeight),
+//       weightUnit: grnData.weightUnit,
+//       quantityUnit: grnData.quantityUnit,
+//       lessNoOfBags: parseInt(grnData.lessNoOfBags) || 0,
+//       subGrossKg: parseInt(grnData.subGrossKg),
+//       lessMoistureKg: parseInt(grnData.lessMoistureKg) || 0,
+//       lessQualityKg: parseInt(grnData.lessQualityKg) || 0,
+//       netWeightKg: parseInt(grnData.netWeightKg),
+//       cheque_in_favor_of: grnData.cheque_in_favor_of,
+//       payment_weight: grnData.payment_weight,
+//       payment_quantity: parseInt(grnData.payment_quantity),
+//       payment_rate: parseInt(grnData.payment_rate),
+//       payment_amount: parseInt(grnData.payment_amount),
+//       paymentDate: new Date(grnData.paymentDate),
+//       drAc: grnData.drAc ? parseInt(grnData.drAc) : null,
+//       qualityGrade: grnData.qualityGrade,
+//       rate: parseInt(grnData.rate),
+//       remarks: grnData.remarks,
+//       status: grnData.status,
+//       currentStep: parseInt(grnData.currentStep),
+//     };
+
+//     if (id) {
+//       // Update existing GRN
+//       grn = await prisma.grns.update({
+//         where: { id: parseInt(id) },
+//         data: {
+//           ...commonData,
+//           [getCurrentStepField(grnData.currentStep)]: { connect: { id: req.user.id } },
+//         },
+//       });
+//     } else {
+//       grn = await prisma.grns.create({
+//         data: {
+//          ...commonData,
+//           preparedBy: { connect: { id: req.user.id } },
+//         },
+//       })
+//     }
+
+//     // Send email to next person in workflow if not the last step
+//     if (grnData.currentStep < 4) {
+//       await sendEmailToNextPerson(grnData.currentStep + 1, grn.id);
+//     }
+
+//     res.status(201).json(grn);
+//   } catch (error) {
+//     console.error('Error creating/updating GRN:', error);
+//     res.status(500).json({ message: 'Error creating/updating GRN', error: error.message });
+//   }
+// });
+
+router.post('/', authenticateUser, validateGRN, async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
@@ -65,24 +138,23 @@ router.post('/',authenticateUser, async (req, res) => {
       remarks: grnData.remarks,
       status: grnData.status,
       currentStep: parseInt(grnData.currentStep),
+      preparedBy: { connect: { id: parseInt(grnData.preparedById) } },
+      checkedBy: grnData.checkedById ? { connect: { id: parseInt(grnData.checkedById) } } : undefined,
+      authorizedBy: grnData.authorizedById ? { connect: { id: parseInt(grnData.authorizedById) } } : undefined,
+      receivedBy: grnData.receivedById ? { connect: { id: parseInt(grnData.receivedById) } } : undefined,
     };
 
     if (id) {
       // Update existing GRN
       grn = await prisma.grns.update({
         where: { id: parseInt(id) },
-        data: {
-          ...commonData,
-          [getCurrentStepField(grnData.currentStep)]: { connect: { id: req.user.id } },
-        },
+        data: commonData,
       });
     } else {
+      // Create new GRN
       grn = await prisma.grns.create({
-        data: {
-         ...commonData,
-          preparedBy: { connect: { id: req.user.id } },
-        },
-      })
+        data: commonData,
+      });
     }
 
     // Send email to next person in workflow if not the last step
@@ -96,6 +168,7 @@ router.post('/',authenticateUser, async (req, res) => {
     res.status(500).json({ message: 'Error creating/updating GRN', error: error.message });
   }
 });
+
 
 // Get GRN by ID
 router.get('/:id',  async (req, res) => {
@@ -168,14 +241,15 @@ async function sendEmailToNextPerson(nextStep, grnId) {
 
     const transporter = nodemailer.createTransport({
       host: 'smtp.gmail.com',
-      port: 465,
-      secure: true,
+      port: 587,
+      secure: false,
       auth: {
         user: "benithalouange@gmail.com",
         pass: "evzc oezs lslz mhoc",
       },
-      debug: true, // Enable debug logs
-      logger: true // Log to console
+      tls: {
+        rejectUnauthorized: false
+      }
     });
 
     console.log('Transporter created, attempting to verify...');
