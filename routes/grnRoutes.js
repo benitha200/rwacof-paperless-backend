@@ -6,7 +6,7 @@ const { body, validationResult } = require('express-validator');
 const nodemailer = require('nodemailer');
 require('dotenv').config();
 const authenticateUser=require('./UserRoutes');
-
+const GRNApprovalEmail = require('../src/components/ui/GRNApprovalEmail');
 
 const validateGRN = [
   body('receivedDate').isISO8601().toDate().withMessage('Invalid date format'),
@@ -17,7 +17,7 @@ const validateGRN = [
   body('totalWeight').isFloat().withMessage('Total weight must be a number'),
   body('weightUnit').notEmpty().withMessage('Weight unit is required'),
   body('qualityGrade').notEmpty().withMessage('Quality grade is required'),
-  body('status').isIn(['pending','Received', 'approved', 'rejected', 'completed']).withMessage('Invalid status'),
+  body('status').isIn(['Received','QualityApproved','PriceSet','MDApproved','Paid']).withMessage('Invalid status'),
   body('currentStep').isInt({ min: 0, max: 4 }).withMessage('Invalid current step'),
 ];
 
@@ -118,7 +118,7 @@ router.get('/:id',  async (req, res) => {
 // List all GRNs (with optional filtering)
 router.get('/',  async (req, res) => {
   try {
-    const grns = await prisma.grns.findMany();
+    const grns = await prisma.grns.findMany({orderBy:{id:'desc'}});
     res.json(grns);
   } catch (error) {
     console.error('Error fetching GRNs:', error);
@@ -139,51 +139,6 @@ router.delete('/:id',  async (req, res) => {
   }
 });
 
-// Helper function to get the current step field name
-function getCurrentStepField(currentStep) {
-  const stepFields = ['preparedBy', 'checkedBy', 'authorizedBy', 'receivedBy'];
-  return stepFields[currentStep];
-}
-
-// Helper function to send email to next person in workflow
-
-// async function sendEmailToNextPerson(nextStep, grnId) {
-//   const roles = ['WeightBridgeManager', 'QualityManager', 'COO', 'ManagingDirector', 'Finance'];
-//   const nextRole = roles[nextStep];
-
-//   try {
-//     const user = await prisma.user.findFirst({
-//       where: { role: nextRole },
-//     });
-
-//     if (!user) {
-//       console.error(`User with role ${nextRole} not found`);
-//       return;
-//     }
-
-//     const transporter = nodemailer.createTransport({
-//       host: 'smtp.gmail.com',
-//       port: 587,
-//       secure: false,
-//       auth: {
-//         user: process.env.EMAIL_NAME,
-//         pass: process.env.EMAIL_PASSWORD,
-//       },
-//     });
-
-//     await transporter.sendMail({
-//       from: `"GRN System" <${process.env.EMAIL_NAME}>`,
-//       to: user.email,
-//       subject: `GRN ${grnId} Ready for Your Approval`,
-//       text: `Please review and approve GRN ${grnId} in the system.`,
-//       html: `<p>Please review and approve GRN ${grnId} in the system.</p>`,
-//     });
-
-//   } catch (error) {
-//     console.error('Error sending email:', error);
-//   }
-// }
-
 async function sendEmailToNextPerson(currentStep, grnId) {
   const roles = ['WeightBridgeManager', 'QualityManager', 'COO', 'ManagingDirector', 'Finance'];
   const nextRole = roles[currentStep + 1];
@@ -203,6 +158,12 @@ async function sendEmailToNextPerson(currentStep, grnId) {
       return;
     }
 
+    const emailHtml = GRNApprovalEmail({
+      grnId: grnId,
+      recipientName: user.name,
+      role: nextRole
+    });
+
     const transporter = nodemailer.createTransport({
       host: 'smtp.gmail.com',
       port: 587,
@@ -214,11 +175,10 @@ async function sendEmailToNextPerson(currentStep, grnId) {
     });
 
     await transporter.sendMail({
-      from: `"GRN System" <benithalouange@gmail.com>`,
+      from: '"GRN System" <benithalouange@gmail.com>',
       to: user.email,
       subject: `GRN ${grnId} Ready for Your Approval`,
-      text: `Please review and approve GRN ${grnId} in the system. Click here to view: http://localhost:5173/grn/${grnId}`,
-      html: `<p>Please review and approve GRN ${grnId} in the system. <a href="http://localhost:5173/grn/${grnId}">Click here to view</a>.</p>`,
+      html: emailHtml,
     });
 
     console.log(`Email sent to ${user.email} for GRN ${grnId}`);
