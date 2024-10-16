@@ -84,9 +84,35 @@ const router = express.Router();
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
+
 router.post('/', async (req, res, next) => {
   try {
-    const vgm = await prisma.vGM.create({ data: req.body });
+    const { containers, ...vgmData } = req.body;
+    
+    // Extract the containerNumber from the first container
+    const containerNumber = containers[0]?.containerNumber || '';
+    const containerTypeSize = containers[0]?.containerTypeSize || '';
+    const vgmKgs = containers[0]?.vgmKgs || '';
+    const cargoGwKgs = containers[0]?.cargoGwKgs || '';
+    const method = containers[0]?.method || '';
+
+    const vgm = await prisma.vGM.create({
+      data: {
+        ...vgmData,
+        containerNumber, 
+        containerTypeSize, 
+        vgmKgs, 
+        cargoGwKgs, 
+        method, 
+        containers: {
+          create: containers
+        }
+      },
+      include: {
+        containers: true
+      }
+    });
+    
     res.json(vgm);
   } catch (error) {
     next(error);

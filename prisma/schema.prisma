@@ -71,8 +71,8 @@ model Invoice {
   consignee          String
   consigneeAddress   String   @db.Text
   billOfLadingNo     String
-  amountWords        String   @db.Text
   authorizedSignature String
+  InvoiceDate         DateTime
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
   shipment           Shipment @relation(fields: [shipmentId], references: [id])
@@ -82,6 +82,7 @@ model VGM {
   id               Int      @id @default(autoincrement())
   shipmentId       Int      @unique
   bookingBlNumber  String
+  containerNumber  String   
   containerTypeSize String
   vgmKgs           Decimal  @db.Decimal(10, 2)
   cargoGwKgs       Decimal  @db.Decimal(10, 2)
@@ -97,6 +98,7 @@ model VGM {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
   shipment         Shipment @relation(fields: [shipmentId], references: [id])
+  containers       Container[]
 }
 
 model StuffingReport {
@@ -123,14 +125,15 @@ model StuffingReport {
 }
 
 model Container {
-  id            Int      @id @default(autoincrement())
-  containerNo   String   @unique
-  type          String
-  vgm           Float
-  cargoWeight   Float
-  tare          Float
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id               Int      @id @default(autoincrement())
+  vgmId            Int
+  containerNumber  String
+  containerTypeSize String
+  vgmKgs           Decimal  @db.Decimal(10, 2)
+  cargoGwKgs       Decimal  @db.Decimal(10, 2)
+  method           String
+  remarks          String?  @db.Text
+  vgm              VGM      @relation(fields: [vgmId], references: [id])
 }
 
 
