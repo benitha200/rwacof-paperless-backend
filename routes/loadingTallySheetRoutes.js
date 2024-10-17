@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const { body,validationResult  } = require('express-validator');
-const { PrismaClient } = require('@prisma/client');
+const { PrismaClient, Prisma } = require('@prisma/client');
 const prisma = new PrismaClient();
+const {Decimal}=new PrismaClient();
 
 class AppError extends Error {
   constructor(message, statusCode) {
@@ -30,12 +31,42 @@ router.post('/', validateLoadingTallySheet, async (req, res, next) => {
   }
 
   try {
-    const loadingTallySheet = await prisma.loadingTallySheet.create({ data: req.body });
+    // Try to create new loading tally sheet
+    const loadingTallySheet = await prisma.loadingTallySheet.create({
+      data: {
+        shipmentId: parseInt(req.body.shipmentId),
+        loadingDay: new Date(req.body.loadingDay),
+        sl: req.body.sl,
+        forwarder: req.body.forwarder,
+        rssSsrwSprw: req.body.rssSsrwSprw,
+        plateNo: req.body.plateNo,
+        tare: new Prisma.Decimal(req.body.tare)
+      }
+    });
     res.json(loadingTallySheet);
   } catch (error) {
     console.error('Error creating loading tally sheet:', error);
+    
     if (error.code === 'P2002') {
-      next(new AppError('A unique constraint violation occurred. This record may already exist.', 400));
+      try {
+        // If record exists, update it
+        const updatedLoadingTallySheet = await prisma.loadingTallySheet.update({
+          where: {
+            shipmentId: parseInt(req.body.shipmentId)
+          },
+          data: {
+            loadingDay: new Date(req.body.loadingDay),
+            sl: req.body.sl,
+            forwarder: req.body.forwarder,
+            rssSsrwSprw: req.body.rssSsrwSprw,
+            plateNo: req.body.plateNo,
+            tare: new Prisma.Decimal(req.body.tare)
+          }
+        });
+        res.json(updatedLoadingTallySheet);
+      } catch (updateError) {
+        next(new AppError(`Failed to update loading tally sheet: ${updateError.message}`, 400));
+      }
     } else if (error.code === 'P2003') {
       next(new AppError('A foreign key constraint failed. Please check the shipmentId.', 400));
     } else {
@@ -43,15 +74,6 @@ router.post('/', validateLoadingTallySheet, async (req, res, next) => {
     }
   }
 });
-
-// router.post('/', async (req, res, next) => {
-//   try {
-//     const loadingTallySheet = await prisma.loadingTallySheet.create({ data: req.body });
-//     res.json(loadingTallySheet);
-//   } catch (error) {
-//     next(new AppError('Failed to create loading tally sheet', 500));
-//   }
-// });
 
 router.get('/', async (req, res, next) => {
   try {
