@@ -107,21 +107,33 @@ model StuffingReport {
   client           String
   mandate          String   @db.Text
   product          String
+  numberOfBags     Int
   packing          String
   vesselName       String
   billOfLadingNo   String
   place            String
+  container        String
   stuffingStart    DateTime
   stuffingEnd      DateTime
   tempSealTime     DateTime
   finalSealTime    DateTime
   containerCondition String  @db.Text
+  lots             String
   illyId           String
   authorizedPerson String
   signatureDate    DateTime
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
   shipment         Shipment @relation(fields: [shipmentId], references: [id])
+
+  image1             String?
+  image2             String?
+  image3             String?
+  image4             String?
+  image5             String?
+  image6             String?
+  image7             String?
+  image8             String?
 }
 
 model Container {
