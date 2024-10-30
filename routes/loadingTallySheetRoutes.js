@@ -77,7 +77,7 @@ router.post('/', validateLoadingTallySheet, async (req, res, next) => {
 
 router.get('/', async (req, res, next) => {
   try {
-    const loadingTallySheets = await prisma.loadingTallySheet.findMany();
+    const loadingTallySheets = await prisma.loadingTallySheet.findMany({include:{shipment:true} });
     res.json(loadingTallySheets);
   } catch (error) {
     next(new AppError('Failed to fetch loading tally sheets', 500));
