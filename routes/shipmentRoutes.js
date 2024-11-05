@@ -51,14 +51,23 @@ router.post('/', async (req, res) => {
     }
   });
 
-router.get('/', async (req, res, next) => {
-  try {
-    const shipments = await prisma.shipment.findMany({ orderBy: { id: 'desc' }});
-    res.json(shipments);
-  } catch (error) {
-    next(error);
-  }
-});
+  router.get('/', async (req, res, next) => {
+    try {
+      const shipments = await prisma.shipment.findMany({
+        orderBy: { id: 'desc' },
+        include: {
+          loadingTallySheet: true,
+          invoice: true,
+          vgm: true,
+          stuffingReport: true,
+        },
+      });
+      res.json(shipments);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
 
 router.get('/:id', async (req, res, next) => {
   try {

@@ -72,13 +72,13 @@ router.post('/', authenticateUser, validateGRN, async (req, res) => {
 
     if (id) {
       // Update existing GRN
-      grn = await prisma.grns.update({
+      grn = await prisma.gRN.update({
         where: { id: parseInt(id) },
         data: commonData,
       });
     } else {
       // Create new GRN
-      grn = await prisma.grns.create({
+      grn = await prisma.gRN.create({
         data: commonData,
       });
     }
@@ -98,7 +98,7 @@ router.post('/', authenticateUser, validateGRN, async (req, res) => {
 // Get GRN by ID
 router.get('/:id',  async (req, res) => {
   try {
-    const grn = await prisma.grns.findUnique({
+    const grn = await prisma.gRN.findUnique({
       where: { id: parseInt(req.params.id) },
       include: {
         preparedBy: true,
@@ -118,7 +118,7 @@ router.get('/:id',  async (req, res) => {
 // List all GRNs (with optional filtering)
 router.get('/',  async (req, res) => {
   try {
-    const grns = await prisma.grns.findMany({orderBy:{id:'desc'}});
+    const grns = await prisma.gRN.findMany({orderBy:{id:'desc'}});
     res.json(grns);
   } catch (error) {
     console.error('Error fetching GRNs:', error);
@@ -129,7 +129,7 @@ router.get('/',  async (req, res) => {
 // Delete a GRN
 router.delete('/:id',  async (req, res) => {
   try {
-    await prisma.grns.delete({
+    await prisma.gRN.delete({
       where: { id: parseInt(req.params.id) },
     });
     res.json({ message: 'GRN deleted successfully' });

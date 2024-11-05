@@ -27,20 +27,21 @@ model Shipment {
   id                Int      @id @default(autoincrement())
   containerNo       String
   truckNo           String
-  lotNo             String
+  lotNo             String?
   description       String   @db.Text
-  quantity          Int
-  quantityUnit      String
-  netWeight         Decimal  @db.Decimal(10, 2)
-  netWeightUnit     String
-  amount            Decimal  @db.Decimal(10, 2)
-  price             Decimal  @db.Decimal(10, 2)
-  consignee         String
+  quantity          Int?
+  quantityUnit      String?
+  netWeight         Decimal?  @db.Decimal(10, 2)
+  netWeightUnit     String?
+  amount            Decimal?  @db.Decimal(10, 2)
+  price             Decimal?  @db.Decimal(10, 2)
+  consignee         String?
   date              DateTime @default(now())
   status            String?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
   userId            Int
+  forwarder         String   @default("MSK")
   user              User     @relation(fields: [userId], references: [id])
   loadingTallySheet LoadingTallySheet?
   invoice           Invoice?
