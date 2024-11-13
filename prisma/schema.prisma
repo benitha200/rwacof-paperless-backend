@@ -73,8 +73,6 @@ model Invoice {
   consigneeAddress   String   @db.Text
   billOfLadingNo     String
   authorizedSignature String
-  InvoiceDate         DateTime
-  contractReference  String @default("RWS/SRW/002")
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
   shipment           Shipment @relation(fields: [shipmentId], references: [id])
