@@ -6,7 +6,7 @@ const { body, validationResult } = require('express-validator');
 const nodemailer = require('nodemailer');
 require('dotenv').config();
 const authenticateUser=require('./UserRoutes');
-
+const GRNApprovalEmail = require('../src/components/ui/GRNApprovalEmail');
 
 const validateGRN = [
   body('receivedDate').isISO8601().toDate().withMessage('Invalid date format'),
@@ -17,14 +17,13 @@ const validateGRN = [
   body('totalWeight').isFloat().withMessage('Total weight must be a number'),
   body('weightUnit').notEmpty().withMessage('Weight unit is required'),
   body('qualityGrade').notEmpty().withMessage('Quality grade is required'),
-  body('status').isIn(['pending','Recieved', 'approved', 'rejected', 'completed']).withMessage('Invalid status'),
+  body('status').isIn(['Received','QualityApproved','PriceSet','MDApproved','Paid']).withMessage('Invalid status'),
   body('currentStep').isInt({ min: 0, max: 4 }).withMessage('Invalid current step'),
 ];
 
-// router.use(authenticateUser);
 
-// Create or update GRN
-router.post('/',authenticateUser, async (req, res) => {
+
+router.post('/', authenticateUser, validateGRN, async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
@@ -63,32 +62,30 @@ router.post('/',authenticateUser, async (req, res) => {
       qualityGrade: grnData.qualityGrade,
       rate: parseInt(grnData.rate),
       remarks: grnData.remarks,
-      status: grnData.status,
-      currentStep: parseInt(grnData.currentStep),
+      status: grnData.status || 'pending',
+      currentStep: grnData.currentStep || 0,
+      preparedBy: { connect: { id: parseInt(grnData.preparedById) } },
+      // checkedBy: grnData.checkedById ? { connect: { id: parseInt(grnData.checkedById) } } : undefined,
+      // authorizedBy: grnData.authorizedById ? { connect: { id: parseInt(grnData.authorizedById) } } : undefined,
+      // receivedBy: grnData.receivedById ? { connect: { id: parseInt(grnData.receivedById) } } : undefined,
     };
 
     if (id) {
       // Update existing GRN
-      grn = await prisma.grns.update({
+      grn = await prisma.gRN.update({
         where: { id: parseInt(id) },
-        data: {
-          ...commonData,
-          [getCurrentStepField(grnData.currentStep)]: { connect: { id: req.user.id } },
-        },
+        data: commonData,
       });
     } else {
-      grn = await prisma.grns.create({
-        data: {
-         ...commonData,
-          preparedBy: { connect: { id: req.user.id } },
-        },
-      })
+      // Create new GRN
+      grn = await prisma.gRN.create({
+        data: commonData,
+      });
     }
 
-    // Send email to next person in workflow if not the last step
-    if (grnData.currentStep < 4) {
-      await sendEmailToNextPerson(grnData.currentStep + 1, grn.id);
-    }
+
+    // Send email to next person in workflow
+    await sendEmailToNextPerson(grn.currentStep, grn.id);
 
     res.status(201).json(grn);
   } catch (error) {
@@ -97,10 +94,11 @@ router.post('/',authenticateUser, async (req, res) => {
   }
 });
 
+
 // Get GRN by ID
 router.get('/:id',  async (req, res) => {
   try {
-    const grn = await prisma.grns.findUnique({
+    const grn = await prisma.gRN.findUnique({
       where: { id: parseInt(req.params.id) },
       include: {
         preparedBy: true,
@@ -120,7 +118,7 @@ router.get('/:id',  async (req, res) => {
 // List all GRNs (with optional filtering)
 router.get('/',  async (req, res) => {
   try {
-    const grns = await prisma.grns.findMany();
+    const grns = await prisma.gRN.findMany({orderBy:{id:'desc'}});
     res.json(grns);
   } catch (error) {
     console.error('Error fetching GRNs:', error);
@@ -131,7 +129,7 @@ router.get('/',  async (req, res) => {
 // Delete a GRN
 router.delete('/:id',  async (req, res) => {
   try {
-    await prisma.grns.delete({
+    await prisma.gRN.delete({
       where: { id: parseInt(req.params.id) },
     });
     res.json({ message: 'GRN deleted successfully' });
@@ -141,16 +139,14 @@ router.delete('/:id',  async (req, res) => {
   }
 });
 
-// Helper function to get the current step field name
-function getCurrentStepField(currentStep) {
-  const stepFields = ['preparedBy', 'checkedBy', 'authorizedBy', 'receivedBy'];
-  return stepFields[currentStep];
-}
-
-// Helper function to send email to next person in workflow
-async function sendEmailToNextPerson(nextStep, grnId) {
+async function sendEmailToNextPerson(currentStep, grnId) {
   const roles = ['WeightBridgeManager', 'QualityManager', 'COO', 'ManagingDirector', 'Finance'];
-  const nextRole = roles[nextStep];
+  const nextRole = roles[currentStep + 1];
+
+  if (!nextRole) {
+    console.log('GRN process completed');
+    return;
+  }
 
   try {
     const user = await prisma.user.findFirst({
@@ -162,48 +158,35 @@ async function sendEmailToNextPerson(nextStep, grnId) {
       return;
     }
 
-    console.log('Attempting to create transporter...');
-    console.log('EMAIL_NAME:', process.env.EMAIL_NAME);
-    console.log('EMAIL_PASSWORD length:', process.env.EMAIL_PASSWORD ? process.env.EMAIL_PASSWORD.length : 0);
+    const emailHtml = GRNApprovalEmail({
+      grnId: grnId,
+      recipientName: user.name,
+      role: nextRole
+    });
 
     const transporter = nodemailer.createTransport({
       host: 'smtp.gmail.com',
-      port: 465,
-      secure: true,
+      port: 587,
+      secure: false,
       auth: {
         user: "benithalouange@gmail.com",
-        pass: "evzc oezs lslz mhoc",
+        pass: "pewa uhlk ydil sods",
       },
-      debug: true, // Enable debug logs
-      logger: true // Log to console
     });
 
-    console.log('Transporter created, attempting to verify...');
-
-    try {
-      await transporter.verify();
-      console.log('Transporter verified successfully');
-    } catch (verifyError) {
-      console.error('Transporter verification failed:', verifyError);
-      throw verifyError;
-    }
-
-    console.log('Attempting to send email...');
-
-    const info = await transporter.sendMail({
-      from: `"GRN System" <${process.env.EMAIL_NAME}>`,
+    await transporter.sendMail({
+      from: '"GRN System" <benithalouange@gmail.com>',
       to: user.email,
       subject: `GRN ${grnId} Ready for Your Approval`,
-      text: `Please review and approve GRN ${grnId} in the system.`,
-      html: `<p>Please review and approve GRN ${grnId} in the system.</p>`,
+      html: emailHtml,
     });
 
-    console.log('Message sent: %s', info.messageId);
+    console.log(`Email sent to ${user.email} for GRN ${grnId}`);
   } catch (error) {
-    console.error('Detailed error in sendEmailToNextPerson:', error);
-    throw error;
+    console.error('Error sending email:', error);
   }
 }
+
 
 
 module.exports = router;

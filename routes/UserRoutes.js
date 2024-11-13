@@ -48,7 +48,7 @@ router.post('/register', async (req, res) => {
 });
 
 // Get user by ID
-router.get('/users/:id', authenticateUser, async (req, res) => {
+router.get('/:id', authenticateUser, async (req, res) => {
   try {
     const user = await prisma.user.findUnique({ where: { id: parseInt(req.params.id) } });
     if (!user) return res.status(404).json({ error: 'User not found' });
@@ -59,7 +59,8 @@ router.get('/users/:id', authenticateUser, async (req, res) => {
 });
 
 // Update user details
-router.put('/users/:id', authenticateUser, async (req, res) => {
+router.put('/:id', authenticateUser, async (req, res) => {
+
   try {
     const { firstName, lastName, email } = req.body;
     const user = await prisma.user.update({
@@ -73,7 +74,7 @@ router.put('/users/:id', authenticateUser, async (req, res) => {
 });
 
 // Delete user
-router.delete('/users/:id', authenticateUser, isAdmin, async (req, res) => {
+router.delete('/:id', authenticateUser, isAdmin, async (req, res) => {
   try {
     await prisma.user.delete({ where: { id: parseInt(req.params.id) } });
     res.status(204).send();
