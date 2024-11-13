@@ -8,39 +8,40 @@ datasource db {
 }
 
 model User {
-  id             Int       @id @default(autoincrement())
-  email          String    @unique
-  password       String
-  firstName      String
-  lastName       String
-  role           String
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  firstName String
+  lastName  String?
+  role      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   shipments      Shipment[]
-  preparedGRNs   Grns[]     @relation("PreparedGRNs")
-  checkedGRNs    Grns[]     @relation("CheckedGRNs")
-  authorizedGRNs Grns[]     @relation("AuthorizedGRNs")
-  receivedGRNs   Grns[]     @relation("ReceivedGRNs")
+  preparedGRNs  GRN[] @relation("PreparedBy")
+  checkedGRNs   GRN[] @relation("CheckedBy")
+  authorizedGRNs GRN[] @relation("AuthorizedBy")
+  receivedGRNs  GRN[] @relation("ReceivedBy")
 }
 
 model Shipment {
   id                Int      @id @default(autoincrement())
   containerNo       String
   truckNo           String
-  lotNo             String
+  lotNo             String?
   description       String   @db.Text
-  quantity          Int
-  quantityUnit      String
-  netWeight         Decimal  @db.Decimal(10, 2)
-  netWeightUnit     String
-  amount            Decimal  @db.Decimal(10, 2)
-  price             Decimal  @db.Decimal(10, 2)
-  consignee         String
+  quantity          Int?
+  quantityUnit      String?
+  netWeight         Decimal?  @db.Decimal(10, 2)
+  netWeightUnit     String?
+  amount            Decimal?  @db.Decimal(10, 2)
+  price             Decimal?  @db.Decimal(10, 2)
+  consignee         String?
   date              DateTime @default(now())
   status            String?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
   userId            Int
+  forwarder         String   @default("MSK")
   user              User     @relation(fields: [userId], references: [id])
   loadingTallySheet LoadingTallySheet?
   invoice           Invoice?
@@ -71,8 +72,9 @@ model Invoice {
   consignee          String
   consigneeAddress   String   @db.Text
   billOfLadingNo     String
-  amountWords        String   @db.Text
   authorizedSignature String
+  InvoiceDate         DateTime
+  contractReference  String @default("RWS/SRW/002")
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
   shipment           Shipment @relation(fields: [shipmentId], references: [id])
@@ -82,6 +84,7 @@ model VGM {
   id               Int      @id @default(autoincrement())
   shipmentId       Int      @unique
   bookingBlNumber  String
+  containerNumber  String   
   containerTypeSize String
   vgmKgs           Decimal  @db.Decimal(10, 2)
   cargoGwKgs       Decimal  @db.Decimal(10, 2)
@@ -97,6 +100,7 @@ model VGM {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
   shipment         Shipment @relation(fields: [shipmentId], references: [id])
+  containers       Container[]
 }
 
 model StuffingReport {
@@ -105,74 +109,90 @@ model StuffingReport {
   client           String
   mandate          String   @db.Text
   product          String
+  numberOfBags     Int
   packing          String
   vesselName       String
   billOfLadingNo   String
   place            String
+  container        String
   stuffingStart    DateTime
   stuffingEnd      DateTime
   tempSealTime     DateTime
   finalSealTime    DateTime
   containerCondition String  @db.Text
+  lots             String
   illyId           String
   authorizedPerson String
   signatureDate    DateTime
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
   shipment         Shipment @relation(fields: [shipmentId], references: [id])
+
+  image1             String?
+  image2             String?
+  image3             String?
+  image4             String?
+  image5             String?
+  image6             String?
+  image7             String?
+  image8             String?
 }
 
 model Container {
-  id            Int      @id @default(autoincrement())
-  containerNo   String   @unique
-  type          String
-  vgm           Float
-  cargoWeight   Float
-  tare          Float
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id               Int      @id @default(autoincrement())
+  vgmId            Int
+  containerNumber  String
+  containerTypeSize String
+  vgmKgs           Decimal  @db.Decimal(10, 2)
+  cargoGwKgs       Decimal  @db.Decimal(10, 2)
+  method           String
+  remarks          String?  @db.Text
+  vgm              VGM      @relation(fields: [vgmId], references: [id])
 }
 
-model Grns {
-  id                Int      @id @default(autoincrement())
-  receivedDate      DateTime
-  supplierName      String
-  supplierAddress   String   @db.Text
-  plate_no          String
-  wbridgeRef        String?
-  moisture          Decimal  @db.Decimal(10, 2)
-  parch             Decimal? @db.Decimal(10, 2)
-  coffee_type       String
-  bags              Int
-  quantity          Int
-  totalWeight       Int
-  weightUnit        String
-  quantityUnit      String   @default("kgs")
-  lessNoOfBags      Int?     @default(0)
-  subGrossKg        Int
-  lessMoistureKg    Int?     @default(0)
-  lessQualityKg     Int?     @default(0)
-  netWeightKg       Int
+
+
+
+model GRN {
+  id              Int      @id @default(autoincrement())
+  receivedDate    DateTime
+  supplierName    String
+  supplierAddress String
+  plate_no        String
+  wbridgeRef      String
+  moisture        Float
+  parch           Float?
+  coffee_type     String
+  bags            Int
+  quantity        Int
+  quantityUnit    String
+  totalWeight     Float
+  weightUnit      String
+  lessNoOfBags    Int
+  subGrossKg      Int
+  lessMoistureKg  Int
+  lessQualityKg   Int
+  netWeightKg     Int
   cheque_in_favor_of String
-  payment_weight    String
-  payment_quantity  Int
-  payment_rate      Int
-  payment_amount    Int
-  paymentDate       DateTime
-  drAc              Int?
-  qualityGrade      String
-  rate              Int
-  preparedById      Int
-  preparedBy        User     @relation("PreparedGRNs", fields: [preparedById], references: [id])
-  checkedById       Int?
-  checkedBy         User?    @relation("CheckedGRNs", fields: [checkedById], references: [id])
-  authorizedById    Int?
-  authorizedBy      User?    @relation("AuthorizedGRNs", fields: [authorizedById], references: [id])
-  receivedById      Int?
-  receivedBy        User?    @relation("ReceivedGRNs", fields: [receivedById], references: [id])
-  remarks           String?  @db.Text
-  status            String   @default("Received")
-  currentStep       Int
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  payment_weight  String
+  payment_quantity Int
+  payment_rate    Int
+  payment_amount  Int
+  paymentDate     DateTime
+  drAc            Int?
+  qualityGrade    String
+  rate            Int
+  remarks         String?
+  status          String
+  currentStep     Int
+  preparedById    Int
+  preparedBy      User     @relation("PreparedBy", fields: [preparedById], references: [id])
+  checkedById     Int?
+  checkedBy       User?    @relation("CheckedBy", fields: [checkedById], references: [id])
+  authorizedById  Int?
+  authorizedBy    User?    @relation("AuthorizedBy", fields: [authorizedById], references: [id])
+  receivedById    Int?
+  receivedBy      User?    @relation("ReceivedBy", fields: [receivedById], references: [id])
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
