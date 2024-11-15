@@ -77,7 +77,7 @@ router.post('/', validateInvoice, async (req, res, next) => {
           consigneeAddress,
           billOfLadingNo,
           authorizedSignature,
-          contractReference,
+          // contractReference,
           InvoiceDate: new Date(InvoiceDate),
         },
       });
