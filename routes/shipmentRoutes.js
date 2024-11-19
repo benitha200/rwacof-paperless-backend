@@ -60,6 +60,7 @@ router.post('/', async (req, res) => {
           invoice: true,
           vgm: true,
           stuffingReport: true,
+          contract:true,
         },
       });
       res.json(shipments);
@@ -79,6 +80,7 @@ router.get('/:id', async (req, res, next) => {
         invoice: true,
         vgm: true,
         stuffingReport: true,
+        contract:true,
       },
     });
     if (!shipment) {
@@ -89,19 +91,6 @@ router.get('/:id', async (req, res, next) => {
     next(error);
   }
 });
-
-// router.put('/:id', async (req, res, next) => {
-//   try {
-//     const { id } = req.params;
-//     const updatedShipment = await prisma.shipment.update({
-//       where: { id: parseInt(id) },
-//       data: req.body,
-//     });
-//     res.json(updatedShipment);
-//   } catch (error) {
-//     next(error);
-//   }
-// });
 
 router.put('/:id', async (req, res, next) => {
   try {
