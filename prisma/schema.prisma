@@ -23,6 +23,23 @@ model User {
   receivedGRNs  GRN[] @relation("ReceivedBy")
 }
 
+model Contract {
+  id              Int       @id @default(autoincrement())
+  contractNumber  String    @unique
+  clientName      String
+  startDate       DateTime
+  endDate         DateTime
+  totalQuantity   Int
+  quantityUnit    String
+  price           Decimal   @db.Decimal(10, 2)
+  currency        String    @default("USD")
+  terms           String    @db.Text
+  status          String    @default("ACTIVE")
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  shipments       Shipment[]
+}
+
 model Shipment {
   id                Int      @id @default(autoincrement())
   containerNo       String
@@ -42,12 +59,15 @@ model Shipment {
   updatedAt         DateTime @updatedAt
   userId            Int
   forwarder         String   @default("MSK")
+  contractId        Int
   user              User     @relation(fields: [userId], references: [id])
+  contract          Contract @relation(fields: [contractId], references: [id])
   loadingTallySheet LoadingTallySheet?
   invoice           Invoice?
   vgm               VGM?
   stuffingReport    StuffingReport?
 }
+
 
 
 model LoadingTallySheet {
@@ -73,6 +93,7 @@ model Invoice {
   consigneeAddress   String   @db.Text
   billOfLadingNo     String
   authorizedSignature String
+  InvoiceDate        DateTime?
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
   shipment           Shipment @relation(fields: [shipmentId], references: [id])

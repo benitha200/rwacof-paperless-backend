@@ -83,6 +83,7 @@ const stuffingReportRoutes = require('./routes/stuffingReportRoutes');
 const containerRoutes = require('./routes/containerRoutes');
 const userRoutes = require('./routes/UserRoutes');
 const grnRoutes = require('./routes/grnRoutes');
+const contractRoutes = require('./routes/contractRoutes');
 
 app.use('/api/shipments', shipmentRoutes);
 app.use('/api/loading-tally-sheets', loadingTallySheetRoutes);
@@ -92,7 +93,10 @@ app.use('/api/stuffing-reports', stuffingReportRoutes);
 app.use('/api/containers', containerRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/grn', grnRoutes);
+app.use('/api/contracts', contractRoutes);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+
 
 // Error handling middleware
 const errorHandler = (err, req, res, next) => {
