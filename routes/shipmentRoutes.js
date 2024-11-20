@@ -140,16 +140,42 @@ router.put('/:id', async (req, res, next) => {
   }
 });
 
+
 router.delete('/:id', async (req, res, next) => {
   try {
     const { id } = req.params;
+
+    // Delete related records first
+    await prisma.loadingTallySheet.deleteMany({
+      where: { shipmentId: parseInt(id) },
+    });
+
+    await prisma.invoice.deleteMany({
+      where: { shipmentId: parseInt(id) },
+    });
+
+    // await prisma.vGM.deleteMany({
+    //   where: { shipmentId: parseInt(id) },
+    // });
+
+    await prisma.stuffingReport.deleteMany({
+      where: { shipmentId: parseInt(id) },
+    });
+
+    // await prisma.contract.deleteMany({
+    //   where: { shipmentId: parseInt(id) },
+    // });
+
+    // Delete the shipment
     await prisma.shipment.delete({
       where: { id: parseInt(id) },
     });
+
     res.status(204).send();
   } catch (error) {
     next(error);
   }
 });
+
 
 module.exports = router;
