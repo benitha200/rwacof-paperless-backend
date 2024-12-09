@@ -1,3 +1,7 @@
 node_modules/
 .env
 prisma/migrations
+uploads/
+compressed.zip
+compressed1.zip
+node_modules.zip
