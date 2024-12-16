@@ -84,6 +84,9 @@ const containerRoutes = require('./routes/containerRoutes');
 const userRoutes = require('./routes/UserRoutes');
 const grnRoutes = require('./routes/grnRoutes');
 const contractRoutes = require('./routes/contractRoutes');
+const driverRoutes = require('./routes/DriverRoutes');
+const carRoutes = require('./routes/CarRoutes');
+const tripsRoutes = require('./routes/TripsRoutes');
 
 app.use('/api/shipments', shipmentRoutes);
 app.use('/api/loading-tally-sheets', loadingTallySheetRoutes);
@@ -94,6 +97,10 @@ app.use('/api/containers', containerRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/grn', grnRoutes);
 app.use('/api/contracts', contractRoutes);
+app.use('/api/driver', driverRoutes);
+app.use('/api/car', carRoutes);
+app.use('/api/trips', tripsRoutes);
+
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 
