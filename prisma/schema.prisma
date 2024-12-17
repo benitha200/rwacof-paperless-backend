@@ -58,11 +58,11 @@ model TripRequest {
   employeeId      Int
   reason          String
   itinerary       String
-  vehiclePlate    String
+  vehiclePlate    String?
   departureDate   DateTime
   returnDate      DateTime
   kmAtDeparture   Int
-  kmAtArrival     Int
+  kmAtArrival     Int?
   status          String    @default("PENDING")
   supervisorApproval Boolean @default(false)
   adminApproval    Boolean @default(false)

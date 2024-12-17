@@ -189,7 +189,7 @@ router.put('/employee/:id', authenticateUser, async (req, res) => {
     const requestedId = parseInt(req.params.id);
     
     // Check if the user is an admin or updating their own details
-    if (req.user.role !== 'ADMIN' && req.user.userId !== requestedId) {
+    if (req.user.role !== 'Admin' && req.user.userId !== requestedId) {
       return res.status(403).json({ error: 'Unauthorized access' });
     }
 
