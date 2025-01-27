@@ -53,28 +53,70 @@ model Employee {
   updatedAt             DateTime  @updatedAt
 }
 
+// model TripRequest {
+//   id              Int       @id @default(autoincrement())
+//   employeeId      Int
+//   reason          String
+//   itinerary       String
+//   vehiclePlate    String?
+//   departureDate   DateTime
+//   returnDate      DateTime
+//   kmAtDeparture   Int
+//   kmAtArrival     Int?
+//   status          String    @default("PENDING")
+//   supervisorApproval Boolean @default(false)
+//   adminApproval    Boolean @default(false)
+  
+//   employee        Employee @relation(fields: [employeeId], references: [id])
+//   car             Car?     @relation(fields: [carId], references: [id])
+//   carId           Int?
+//   driver          Driver?  @relation(fields: [driverId], references: [id])
+//   driverId        Int?
+  
+//   createdAt       DateTime @default(now())
+//   updatedAt       DateTime @updatedAt
+// }
+
 model TripRequest {
-  id              Int       @id @default(autoincrement())
-  employeeId      Int
-  reason          String
-  itinerary       String
-  vehiclePlate    String?
-  departureDate   DateTime
-  returnDate      DateTime
-  kmAtDeparture   Int
-  kmAtArrival     Int?
-  status          String    @default("PENDING")
-  supervisorApproval Boolean @default(false)
-  adminApproval    Boolean @default(false)
+  id                Int      @id @default(autoincrement())
+  employeeId        Int
+  requestType       String   @default("LOCAL-KIGALI")
   
-  employee        Employee @relation(fields: [employeeId], references: [id])
-  car             Car?     @relation(fields: [carId], references: [id])
-  carId           Int?
-  driver          Driver?  @relation(fields: [driverId], references: [id])
-  driverId        Int?
+  // Existing fields
+  reason           String
+  itinerary        String
+  vehiclePlate     String?
+  departureDate    DateTime
+  returnDate       DateTime
+  kmAtDeparture    Int
+  kmAtArrival      Int?
+  status           String    @default("PENDING")
+  supervisorApproval Boolean @default(true)
+  adminApproval    Boolean   @default(false)
   
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  // New fields
+  unitDepartment   String @default("Data and Systems Department")
+  postPosition     String?   
+  transportMeans   String?   
+  departureTime    String  @default("12:00 AM") 
+  returnTime       String?   
+  
+  // Authorization fields
+  authorizedById   Int?      
+  authorizedByName String?   
+  authorizedAt     DateTime? 
+  
+  // Existing relations
+  employee         Employee  @relation(fields: [employeeId], references: [id])
+  car              Car?      @relation(fields: [carId], references: [id])
+  carId            Int?
+  driver           Driver?   @relation(fields: [driverId], references: [id])
+  driverId         Int?
+  
+  // Timestamps
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  
 }
 
 model Car {
