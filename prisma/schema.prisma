@@ -28,7 +28,7 @@ model Employee {
   id                    Int       @id @default(autoincrement())
   userId                Int       @unique
   employeeNumber        String    @unique
-  department            String
+  // department            String
   designation           String
   dateOfBirth           DateTime?
   gender                String?
@@ -48,34 +48,14 @@ model Employee {
   
   user                  User      @relation(fields: [userId], references: [id])
   tripRequests          TripRequest[]
+
+  departmentId          Int?
+  department            Department? @relation(fields: [departmentId], references: [id])
+  headOfDepartment      Department[] @relation("DepartmentHead")
   
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 }
-
-// model TripRequest {
-//   id              Int       @id @default(autoincrement())
-//   employeeId      Int
-//   reason          String
-//   itinerary       String
-//   vehiclePlate    String?
-//   departureDate   DateTime
-//   returnDate      DateTime
-//   kmAtDeparture   Int
-//   kmAtArrival     Int?
-//   status          String    @default("PENDING")
-//   supervisorApproval Boolean @default(false)
-//   adminApproval    Boolean @default(false)
-  
-//   employee        Employee @relation(fields: [employeeId], references: [id])
-//   car             Car?     @relation(fields: [carId], references: [id])
-//   carId           Int?
-//   driver          Driver?  @relation(fields: [driverId], references: [id])
-//   driverId        Int?
-  
-//   createdAt       DateTime @default(now())
-//   updatedAt       DateTime @updatedAt
-// }
 
 model TripRequest {
   id                Int      @id @default(autoincrement())
@@ -88,7 +68,7 @@ model TripRequest {
   vehiclePlate     String?
   departureDate    DateTime
   returnDate       DateTime
-  kmAtDeparture    Int
+  kmAtDeparture    Int?
   kmAtArrival      Int?
   status           String    @default("PENDING")
   supervisorApproval Boolean @default(true)
@@ -349,4 +329,16 @@ model GRN {
   receivedBy      User?    @relation("ReceivedBy", fields: [receivedById], references: [id])
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+}
+
+model Department {
+  id            Int       @id @default(autoincrement())
+  name          String    @unique
+  description   String?
+  headOfDepartmentId Int? 
+  headOfDepartment   Employee? @relation("DepartmentHead", fields: [headOfDepartmentId], references: [id])
+  employees     Employee[]
+  status        String    @default("ACTIVE")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 }

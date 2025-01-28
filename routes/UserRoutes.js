@@ -16,6 +16,10 @@ const transporter = nodemailer.createTransport({
     pass: "pewa uhlk ydil sods",
   },
 });
+
+
+
+
 function generateRandomPassword(length = 12) {
   // Define character sets
   const uppercaseChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -69,7 +73,8 @@ const isAdmin = (req, res, next) => {
 };
 
 // Create a new employee user// Create a new employee user
-router.post('/register-employee', authenticateUser, isAdmin, async (req, res) => {
+// router.post('/register-employee', authenticateUser, isAdmin, async (req, res) => {
+  router.post('/register-employee', async (req, res) => {
   try {
     const { 
       email, 
