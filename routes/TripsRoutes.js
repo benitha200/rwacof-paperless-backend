@@ -190,9 +190,9 @@ router.post('/', async (req, res, next) => {
         }
 
         // Check if the employee has a reporting manager
-        if (!employee.reportsToId) {
-            return res.status(400).json({ error: 'No reporting manager assigned' });
-        }
+        // if (!employee.reportsToId) {
+        //     return res.status(400).json({ error: 'No reporting manager assigned' });
+        // }
 
         // Create trip request
         const tripRequest = await prisma.tripRequest.create({
