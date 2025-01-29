@@ -74,16 +74,130 @@ const isAdmin = (req, res, next) => {
 
 // Create a new employee user// Create a new employee user
 // router.post('/register-employee', authenticateUser, isAdmin, async (req, res) => {
-  router.post('/register-employee', async (req, res) => {
+//   router.post('/register-employee', async (req, res) => {
+//   try {
+//     const { 
+//       email, 
+//       password, 
+//       firstName, 
+//       lastName, 
+//       // Employee-specific fields
+//       employeeNumber,
+//       department,
+//       designation,
+//       dateOfBirth,
+//       gender,
+//       phoneNumber,
+//       address,
+//       joinDate,
+//       salaryGrade,
+//       emergencyContactName,
+//       emergencyContactPhone,
+//       bankAccountNumber,
+//       panNumber,
+//       status = 'ACTIVE', // Default status if not provided
+      
+//       // New field for reporting manager
+//       reportsToId
+//     } = req.body;
+
+//     // Validate required fields
+//     if (!email || !firstName || !lastName || !employeeNumber) {
+//       return res.status(400).json({ error: 'Missing required fields' });
+//     }
+
+//      // Generate a random password
+//      const randomPassword = generateRandomPassword();
+
+//      console.log(randomPassword);
+
+//      // Hash the random password
+//      const hashedPassword = await bcrypt.hash(randomPassword, 10);
+
+//     // Create user and employee in a transaction
+//     const newUser = await prisma.$transaction(async (tx) => {
+//       // Create user
+//       const user = await prisma.user.create({
+//         data: { 
+//           email, 
+//           password: hashedPassword, 
+//           firstName, 
+//           lastName, 
+//           role: 'EMPLOYEE'
+//         }
+//       });
+
+//       // Create employee
+//       const employee = await prisma.employee.create({
+//         data: {
+//           userId: user.id,
+//           employeeNumber,
+//           department,
+//           designation,
+//           dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
+//           gender,
+//           phoneNumber,
+//           address,
+//           joinDate: joinDate ? new Date(joinDate) : undefined,
+//           salaryGrade,
+//           emergencyContactName,
+//           emergencyContactPhone,
+//           bankAccountNumber,
+//           panNumber,
+//           status,
+          
+//           // Add reports to field
+//           reportsToId: reportsToId ? parseInt(reportsToId) : undefined
+//         }
+//       });
+
+//       return { user, employee, tempPassword: randomPassword };
+//     });
+
+//     try {
+//       await transporter.sendMail({
+//         from: process.env.EMAIL_USER, // sender address
+//         to: email,
+//         subject: 'Your New Employee Account Credentials',
+//         html: `
+//           <h1>Welcome ${firstName} ${lastName}!</h1>
+//           <p>Your account has been created. Please find your login credentials below:</p>
+//           <p>Email: ${email}</p>
+//           <p>Temporary Password: ${newUser.tempPassword}</p>
+//           <strong>Please change your password upon first login.</strong>
+//           <p>If you have any issues, please contact the HR department.</p>
+//         `
+//       });
+//     } catch (emailError) {
+//       console.error('Failed to send welcome email:', emailError);
+//       // Note: We'll still return a successful response even if email fails
+//     }
+
+//     // Remove sensitive information before sending response
+//     const { password: _, ...userResponse } = newUser.user;
+//     const { userId: __, ...employeeResponse } = newUser.employee;
+
+//     res.status(201).json({
+//       user: userResponse,
+//       employee: employeeResponse,
+//       emailSent: true
+//     });
+//   } catch (error) {
+//     console.error('Employee registration error:', error);
+//     res.status(400).json({ error: error.message });
+//   }
+// });
+
+router.post('/register-employee', async (req, res) => {
   try {
-    const { 
-      email, 
-      password, 
-      firstName, 
-      lastName, 
+    const {
+      email,
+      password,
+      firstName,
+      lastName,
       // Employee-specific fields
       employeeNumber,
-      department,
+      departmentId,  // Changed from department to departmentId
       designation,
       dateOfBirth,
       gender,
@@ -96,7 +210,6 @@ const isAdmin = (req, res, next) => {
       bankAccountNumber,
       panNumber,
       status = 'ACTIVE', // Default status if not provided
-      
       // New field for reporting manager
       reportsToId
     } = req.body;
@@ -106,23 +219,22 @@ const isAdmin = (req, res, next) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-     // Generate a random password
-     const randomPassword = generateRandomPassword();
+    // Generate a random password
+    const randomPassword = generateRandomPassword();
+    console.log(randomPassword);
 
-     console.log(randomPassword);
-
-     // Hash the random password
-     const hashedPassword = await bcrypt.hash(randomPassword, 10);
+    // Hash the random password
+    const hashedPassword = await bcrypt.hash(randomPassword, 10);
 
     // Create user and employee in a transaction
     const newUser = await prisma.$transaction(async (tx) => {
       // Create user
       const user = await prisma.user.create({
-        data: { 
-          email, 
-          password: hashedPassword, 
-          firstName, 
-          lastName, 
+        data: {
+          email,
+          password: hashedPassword,
+          firstName,
+          lastName,
           role: 'EMPLOYEE'
         }
       });
@@ -132,7 +244,7 @@ const isAdmin = (req, res, next) => {
         data: {
           userId: user.id,
           employeeNumber,
-          department,
+          departmentId: departmentId ? parseInt(departmentId) : undefined,  // Added departmentId
           designation,
           dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
           gender,
@@ -145,7 +257,6 @@ const isAdmin = (req, res, next) => {
           bankAccountNumber,
           panNumber,
           status,
-          
           // Add reports to field
           reportsToId: reportsToId ? parseInt(reportsToId) : undefined
         }
@@ -156,7 +267,7 @@ const isAdmin = (req, res, next) => {
 
     try {
       await transporter.sendMail({
-        from: process.env.EMAIL_USER, // sender address
+        from: process.env.EMAIL_USER,
         to: email,
         subject: 'Your New Employee Account Credentials',
         html: `
