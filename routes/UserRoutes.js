@@ -196,26 +196,26 @@ router.post('/register-employee', async (req, res) => {
       firstName,
       lastName,
       // Employee-specific fields
-      employeeNumber,
+      // employeeNumber,
       departmentId,  // Changed from department to departmentId
       designation,
       dateOfBirth,
       gender,
       phoneNumber,
       address,
-      joinDate,
-      salaryGrade,
-      emergencyContactName,
-      emergencyContactPhone,
-      bankAccountNumber,
-      panNumber,
+      // joinDate,
+      // salaryGrade,
+      // emergencyContactName,
+      // emergencyContactPhone,
+      // bankAccountNumber,
+      // panNumber,
       status = 'ACTIVE', // Default status if not provided
       // New field for reporting manager
       reportsToId
     } = req.body;
 
     // Validate required fields
-    if (!email || !firstName || !lastName || !employeeNumber) {
+    if (!email || !firstName || !lastName) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
@@ -243,21 +243,20 @@ router.post('/register-employee', async (req, res) => {
       const employee = await prisma.employee.create({
         data: {
           userId: user.id,
-          employeeNumber,
+          employeeNumber: "RCF-"+user.id,
           departmentId: departmentId ? parseInt(departmentId) : undefined,  // Added departmentId
           designation,
           dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
           gender,
           phoneNumber,
           address,
-          joinDate: joinDate ? new Date(joinDate) : undefined,
-          salaryGrade,
-          emergencyContactName,
-          emergencyContactPhone,
-          bankAccountNumber,
-          panNumber,
+          // joinDate: joinDate ? new Date(joinDate) : undefined,
+          // salaryGrade,
+          // emergencyContactName,
+          // emergencyContactPhone,
+          // bankAccountNumber,
+          // panNumber,
           status,
-          // Add reports to field
           reportsToId: reportsToId ? parseInt(reportsToId) : undefined
         }
       });
