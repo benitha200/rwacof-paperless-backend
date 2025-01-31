@@ -250,8 +250,8 @@ router.put('/employee/:id', async (req, res) => {
     });
 
     // Remove sensitive information before sending response
-    const { password: _, ...userResponse } = updatedData.user;
-    // const { userId: __, ...employeeResponse } = updatedData.employee;
+    // const { password: _, ...userResponse } = updatedData.user;
+    const { userId: __, ...employeeResponse } = updatedData.employee;
 
     res.json({
       // user: userResponse,
@@ -262,6 +262,7 @@ router.put('/employee/:id', async (req, res) => {
     res.status(400).json({ error: error.message });
   }
 });
+
 
 // Get employee details (updated to include manager information)
 router.get('/employee/:id', authenticateUser, async (req, res) => {
