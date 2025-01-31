@@ -198,12 +198,12 @@ router.post('/', async (req, res, next) => {
                             Departure Date: ${tripData.departureDate || 'Not specified'}
                         </div>
                         
-                        <p>You will be notified once your supervisor reviews your request.</p>
+                        <p>You will be notified once your trip is approved and car is assigened to you.</p>
                     </div>
                     
                     <div class="footer">
                         <p>This is an automated message. Please do not reply to this email.</p>
-                        <p>© ${new Date().getFullYear()} Sucafina. All rights reserved.</p>
+                        <p>© ${new Date().getFullYear()} Rwacof Exports Ltd. All rights reserved.</p>
                     </div>
                 </div>
             </body>
@@ -356,7 +356,7 @@ router.patch('/:id/supervisor-approve', async (req, res, next) => {
                     
                     <div class="footer">
                         <p>This is an automated message. Please do not reply to this email.</p>
-                        <p>© ${new Date().getFullYear()} Your Company Name. All rights reserved.</p>
+                        <p>© ${new Date().getFullYear()} Rwacof Exports Ltd. All rights reserved.</p>
                     </div>
                 </div>
             </body>
@@ -599,7 +599,7 @@ router.patch('/:id/assign', async (req, res, next) => {
                         </div>
                         
                         <div class="footer">
-                            <p>For any questions or changes, please contact the Fleet Management Office.</p>
+                            <p>For any questions or changes, please go to the reception for more info.</p>
                             <p>© ${new Date().getFullYear()} Rwacof Exports Ltd. All rights reserved.</p>
                         </div>
                     </div>
