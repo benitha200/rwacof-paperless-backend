@@ -72,121 +72,7 @@ const isAdmin = (req, res, next) => {
   next();
 };
 
-// Create a new employee user// Create a new employee user
-// router.post('/register-employee', authenticateUser, isAdmin, async (req, res) => {
-//   router.post('/register-employee', async (req, res) => {
-//   try {
-//     const { 
-//       email, 
-//       password, 
-//       firstName, 
-//       lastName, 
-//       // Employee-specific fields
-//       employeeNumber,
-//       department,
-//       designation,
-//       dateOfBirth,
-//       gender,
-//       phoneNumber,
-//       address,
-//       joinDate,
-//       salaryGrade,
-//       emergencyContactName,
-//       emergencyContactPhone,
-//       bankAccountNumber,
-//       panNumber,
-//       status = 'ACTIVE', // Default status if not provided
-      
-//       // New field for reporting manager
-//       reportsToId
-//     } = req.body;
-
-//     // Validate required fields
-//     if (!email || !firstName || !lastName || !employeeNumber) {
-//       return res.status(400).json({ error: 'Missing required fields' });
-//     }
-
-//      // Generate a random password
-//      const randomPassword = generateRandomPassword();
-
-//      console.log(randomPassword);
-
-//      // Hash the random password
-//      const hashedPassword = await bcrypt.hash(randomPassword, 10);
-
-//     // Create user and employee in a transaction
-//     const newUser = await prisma.$transaction(async (tx) => {
-//       // Create user
-//       const user = await prisma.user.create({
-//         data: { 
-//           email, 
-//           password: hashedPassword, 
-//           firstName, 
-//           lastName, 
-//           role: 'EMPLOYEE'
-//         }
-//       });
-
-//       // Create employee
-//       const employee = await prisma.employee.create({
-//         data: {
-//           userId: user.id,
-//           employeeNumber,
-//           department,
-//           designation,
-//           dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
-//           gender,
-//           phoneNumber,
-//           address,
-//           joinDate: joinDate ? new Date(joinDate) : undefined,
-//           salaryGrade,
-//           emergencyContactName,
-//           emergencyContactPhone,
-//           bankAccountNumber,
-//           panNumber,
-//           status,
-          
-//           // Add reports to field
-//           reportsToId: reportsToId ? parseInt(reportsToId) : undefined
-//         }
-//       });
-
-//       return { user, employee, tempPassword: randomPassword };
-//     });
-
-//     try {
-//       await transporter.sendMail({
-//         from: process.env.EMAIL_USER, // sender address
-//         to: email,
-//         subject: 'Your New Employee Account Credentials',
-//         html: `
-//           <h1>Welcome ${firstName} ${lastName}!</h1>
-//           <p>Your account has been created. Please find your login credentials below:</p>
-//           <p>Email: ${email}</p>
-//           <p>Temporary Password: ${newUser.tempPassword}</p>
-//           <strong>Please change your password upon first login.</strong>
-//           <p>If you have any issues, please contact the HR department.</p>
-//         `
-//       });
-//     } catch (emailError) {
-//       console.error('Failed to send welcome email:', emailError);
-//       // Note: We'll still return a successful response even if email fails
-//     }
-
-//     // Remove sensitive information before sending response
-//     const { password: _, ...userResponse } = newUser.user;
-//     const { userId: __, ...employeeResponse } = newUser.employee;
-
-//     res.status(201).json({
-//       user: userResponse,
-//       employee: employeeResponse,
-//       emailSent: true
-//     });
-//   } catch (error) {
-//     console.error('Employee registration error:', error);
-//     res.status(400).json({ error: error.message });
-//   }
-// });
+// register an employee
 
 router.post('/register-employee', async (req, res) => {
   try {
@@ -299,12 +185,12 @@ router.post('/register-employee', async (req, res) => {
 });
 
 // Update employee details
-router.put('/employee/:id', authenticateUser, async (req, res) => {
+router.put('/employee/:id', async (req, res) => {
   try {
     const requestedId = parseInt(req.params.id);
     
     // Check if the user is an admin or updating their own details
-    if (req.user.role !== 'Admin' && req.user.userId !== requestedId) {
+    if (req.user.role !== 'ADMIN' && req.user.userId !== requestedId) {
       return res.status(403).json({ error: 'Unauthorized access' });
     }
 
@@ -315,28 +201,26 @@ router.put('/employee/:id', authenticateUser, async (req, res) => {
       lastName,
 
       // Employee fields
-      department,
+      departmentId,  // Changed from department to departmentId
       designation,
       dateOfBirth,
       gender,
       phoneNumber,
       address,
-      joinDate,
-      salaryGrade,
-      emergencyContactName,
-      emergencyContactPhone,
-      bankAccountNumber,
-      panNumber,
+      // joinDate,
+      // salaryGrade,
+      // emergencyContactName,
+      // emergencyContactPhone,
+      // bankAccountNumber,
+      // panNumber,
       status,
-      
-      // New field for reporting manager
       reportsToId
     } = req.body;
 
     // Update in a transaction
-    const updatedData = await prisma.$transaction(async (prisma) => {
+    const updatedData = await prisma.$transaction(async (tx) => {
       // Update user details
-      const updatedUser = await prisma.user.update({
+      const updatedUser = await tx.user.update({
         where: { id: requestedId },
         data: { 
           email, 
@@ -346,33 +230,39 @@ router.put('/employee/:id', authenticateUser, async (req, res) => {
       });
 
       // Update employee details
-      const updatedEmployee = await prisma.employee.update({
+      const updatedEmployee = await tx.employee.update({
         where: { userId: requestedId },
         data: {
-          department,
+          departmentId: departmentId ? parseInt(departmentId) : undefined,
           designation,
           dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
           gender,
           phoneNumber,
           address,
-          joinDate: joinDate ? new Date(joinDate) : undefined,
-          salaryGrade,
-          emergencyContactName,
-          emergencyContactPhone,
-          bankAccountNumber,
-          panNumber,
+          // joinDate: joinDate ? new Date(joinDate) : undefined,
+          // salaryGrade,
+          // emergencyContactName,
+          // emergencyContactPhone,
+          // bankAccountNumber,
+          // panNumber,
           status,
-          
-          // Add reports to field
-          reportsToId: reportsToId ? parseInt(reportsToId) : null
+          reportsToId: reportsToId ? parseInt(reportsToId) : undefined
         }
       });
 
       return { user: updatedUser, employee: updatedEmployee };
     });
 
-    res.json(updatedData);
+    // Remove sensitive information before sending response
+    const { password: _, ...userResponse } = updatedData.user;
+    const { userId: __, ...employeeResponse } = updatedData.employee;
+
+    res.json({
+      user: userResponse,
+      employee: employeeResponse
+    });
   } catch (error) {
+    console.error('Employee update error:', error);
     res.status(400).json({ error: error.message });
   }
 });
