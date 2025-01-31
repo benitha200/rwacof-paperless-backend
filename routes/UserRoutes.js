@@ -189,10 +189,6 @@ router.put('/employee/:id', async (req, res) => {
   try {
     const requestedId = parseInt(req.params.id);
     
-    // Check if the user is an admin or updating their own details
-    if (req.user.role !== 'ADMIN' && req.user.userId !== requestedId) {
-      return res.status(403).json({ error: 'Unauthorized access' });
-    }
 
     const { 
       // User fields
@@ -220,18 +216,18 @@ router.put('/employee/:id', async (req, res) => {
     // Update in a transaction
     const updatedData = await prisma.$transaction(async (tx) => {
       // Update user details
-      const updatedUser = await tx.user.update({
-        where: { id: requestedId },
-        data: { 
-          email, 
-          firstName, 
-          lastName 
-        }
-      });
+      // const updatedUser = await tx.user.update({
+      //   where: { id: requestedId },
+      //   data: { 
+      //     email, 
+      //     firstName, 
+      //     lastName 
+      //   }
+      // });
 
       // Update employee details
       const updatedEmployee = await tx.employee.update({
-        where: { userId: requestedId },
+        where: { id: requestedId },
         data: {
           departmentId: departmentId ? parseInt(departmentId) : undefined,
           designation,
@@ -250,15 +246,15 @@ router.put('/employee/:id', async (req, res) => {
         }
       });
 
-      return { user: updatedUser, employee: updatedEmployee };
+      return {employee: updatedEmployee };
     });
 
     // Remove sensitive information before sending response
     const { password: _, ...userResponse } = updatedData.user;
-    const { userId: __, ...employeeResponse } = updatedData.employee;
+    // const { userId: __, ...employeeResponse } = updatedData.employee;
 
     res.json({
-      user: userResponse,
+      // user: userResponse,
       employee: employeeResponse
     });
   } catch (error) {
