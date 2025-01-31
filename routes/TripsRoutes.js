@@ -1,40 +1,28 @@
-const express = require('express');
-const router = express.Router();
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
-const nodemailer = require('nodemailer');
+// use GMAIL TO SEND EMAILS
 
-const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 587,
-    secure: false,
-    auth: {
-        user: "benithalouange@gmail.com",
-        pass: "pewa uhlk ydil sods",
-    },
-});
+// const express = require('express');
+// const router = express.Router();
+// const { PrismaClient } = require('@prisma/client');
+// const prisma = new PrismaClient();
+// const nodemailer = require('nodemailer');
 
-async function sendEmail(to, subject, text, html) {
-    try {
-        await transporter.sendMail({
-            from: {
-                name: "Rwacof Paperless Project",
-                address: "benithalouange@gmail.com"
-            },
-            to,
-            subject,
-            text,
-            html
-        });
-    } catch (error) {
-        console.error('Email sending error:', error);
-    }
-}
+// const transporter = nodemailer.createTransport({
+//     host: 'smtp.gmail.com',
+//     port: 587,
+//     secure: false,
+//     auth: {
+//         user: "benithalouange@gmail.com",
+//         pass: "pewa uhlk ydil sods",
+//     },
+// });
 
 // async function sendEmail(to, subject, text, html) {
 //     try {
 //         await transporter.sendMail({
-//             from: process.env.EMAIL_NAME,
+//             from: {
+//                 name: "Rwacof Paperless Project",
+//                 address: "benithalouange@gmail.com"
+//             },
 //             to,
 //             subject,
 //             text,
@@ -45,129 +33,66 @@ async function sendEmail(to, subject, text, html) {
 //     }
 // }
 
+const express = require('express');
+const router = express.Router();
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
+const fetch = require("node-fetch");
+const { ClientSecretCredential } = require("@azure/identity");
 
-// Create a new trip request
-// router.post('/', async (req, res, next) => {
-//     try {
-//         const { employeeId, ...tripData } = req.body;
+// Azure AD credentials from environment variables
+const tenantId = process.env.AZURE_TENANT_ID;
+const clientId = process.env.AZURE_CLIENT_ID;
+const clientSecret = process.env.AZURE_CLIENT_SECRET;
+const userEmail = process.env.EMAIL_USER;
 
-//         // Find the employee and their reporting manager
-//         const employee = await prisma.employee.findUnique({
-//             where: { id: employeeId },
-//             include: {
-//                 reportsTo: {
-//                     include: { user: true }
-//                 },
-//                 user: true
-//             }
-//         });
+// Create an OAuth2 credential instance
+const credential = new ClientSecretCredential(tenantId, clientId, clientSecret);
 
-//         if (!employee) {
-//             return res.status(404).json({ error: 'Employee not found' });
-//         }
+// Function to get access token
+async function getAccessToken() {
+    const tokenResponse = await credential.getToken("https://graph.microsoft.com/.default");
+    return tokenResponse.token;
+}
 
-//         // Check if the employee has a reporting manager
-//         if (!employee.reportsToId) {
-//             return res.status(400).json({ error: 'No reporting manager assigned' });
-//         }
+// Updated sendEmail function using Microsoft Graph API
+async function sendEmail(to, subject, text, html) {
+    try {
+        const accessToken = await getAccessToken();
 
-//         // Create trip request
-//         const tripRequest = await prisma.tripRequest.create({
-//             data: {
-//                 ...tripData,
-//                 employee: { connect: { id: employeeId } },
-//                 status: 'PENDING',
-//                 supervisorApproval: true,
-//                 adminApproval: false
-//             }
-//         });
+        const emailData = {
+            message: {
+                subject: subject,
+                body: {
+                    contentType: "HTML",
+                    content: html || text,
+                },
+                toRecipients: Array.isArray(to) 
+                    ? to.map(email => ({ emailAddress: { address: email } }))
+                    : to.split(',').map(email => ({ emailAddress: { address: email.trim() } })),
+            },
+        };
 
-//         console.log(employee);
-//         console.log(tripData);
+        const response = await fetch(`https://graph.microsoft.com/v1.0/users/${userEmail}/sendMail`, {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${accessToken}`,
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(emailData),
+        });
 
-//         // Send confirmation email to employee
-//         await sendEmail(
-//             employee.user.email,
-//             'Trip Request Submitted Successfully',
-//             `Your trip request has been submitted and is awaiting approval.`,
-//             `
-//             <!DOCTYPE html>
-//             <html>
-//             <head>
-//                 <style>
-//                     body {
-//                         font-family: Arial, sans-serif;
-//                         line-height: 1.6;
-//                         color: #333333;
-//                         max-width: 600px;
-//                         margin: 0 auto;
-//                     }
-//                     .email-container {
-//                         padding: 20px;
-//                         background-color: #f9f9f9;
-//                     }
-//                     .header {
-//                         background-color: #008080;
-//                         color: white;
-//                         padding: 20px;
-//                         text-align: center;
-//                         border-radius: 5px 5px 0 0;
-//                     }
-//                     .content {
-//                         background-color: white;
-//                         padding: 20px;
-//                         border-radius: 0 0 5px 5px;
-//                         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-//                     }
-//                     .info-section {
-//                         margin: 15px 0;
-//                         padding: 15px;
-//                         background-color: #f5f5f5;
-//                         border-left: 4px solid #008080;
-//                     }
-//                     .footer {
-//                         margin-top: 20px;
-//                         text-align: center;
-//                         color: #666666;
-//                         font-size: 14px;
-//                     }
-//                 </style>
-//             </head>
-//             <body>
-//                 <div class="email-container">
-//                     <div class="header">
-//                         <h1 style="margin: 0;">Trip Request Submitted</h1>
-//                     </div>
-                    
-//                     <div class="content">
-//                         <p>Dear ${employee.user.firstName},</p>
-                        
-//                         <p>Your trip request has been successfully submitted and is now awaiting approval.</p>
-                        
-//                         <div class="info-section">
-//                             <strong>Trip Details:</strong><br>
-//                             Destination: ${tripData.itinerary || 'Not specified'}<br>
-//                             Departure Date: ${tripData.departureDate || 'Not specified'}
-//                         </div>
-                        
-//                         <p>You will be notified once your supervisor reviews your request.</p>
-//                     </div>
-                    
-//                     <div class="footer">
-//                         <p>This is an automated message. Please do not reply to this email.</p>
-//                         <p>© ${new Date().getFullYear()} Sucafina. All rights reserved.</p>
-//                     </div>
-//                 </div>
-//             </body>
-//             </html>
-//             `
-//         );
+        if (!response.ok) {
+            console.error('Email sending error:', await response.text());
+            throw new Error(`Failed to send email: ${response.statusText}`);
+        }
 
-//         res.status(201).json(tripRequest);
-//     } catch (error) {
-//         next(error);
-//     }
-// });
+        console.log("✅ Email sent successfully using Microsoft Graph API!");
+    } catch (error) {
+        console.error('Failed to send email:', error);
+        throw error;
+    }
+}
 
 // create a new trip request
 router.post('/', async (req, res, next) => {
@@ -189,10 +114,7 @@ router.post('/', async (req, res, next) => {
             return res.status(404).json({ error: 'Employee not found' });
         }
 
-        // Check if the employee has a reporting manager
-        // if (!employee.reportsToId) {
-        //     return res.status(400).json({ error: 'No reporting manager assigned' });
-        // }
+      
 
         // Create trip request
         const tripRequest = await prisma.tripRequest.create({
@@ -493,328 +415,7 @@ router.patch('/:id/reject', async (req, res, next) => {
     }
 });
 
-// router.patch('/:id/assign', async (req, res, next) => {
-//     try {
-//         const { id } = req.params;
-//         const { carId, driverId, userId, kmAtDeparture } = req.body;
 
-//         // Verify user's role and permissions
-//         const user = await prisma.user.findUnique({
-//             where: { id: userId },
-//             include: { employee: true }
-//         });
-
-//         if (!user) {
-//             return res.status(403).json({ error: 'Unauthorized User' });
-//         }
-
-//         // Check if the user is a supervisor (specifically the reporting manager) or an admin
-//         const tripRequest = await prisma.tripRequest.findUnique({
-//             where: { id: parseInt(id) },
-//             include: {
-//                 employee: {
-//                     include: {
-//                         user: true,
-//                         reportsTo: true
-//                     }
-//                 },
-//                 car: true,
-//                 driver: true
-//             }
-//         });
-
-//         // Check supervisor approval and authorization
-//         if (!tripRequest.supervisorApproval) {
-//             return res.status(400).json({ error: 'Supervisor approval required before assignment' });
-//         }
-
-//         // Additional check for supervisor
-//         if (user.employee && tripRequest.employee.reportsToId !== user.employee.id) {
-//             // If not the direct reporting manager, check if they are an admin
-//             const isAdmin = user.role === 'ADMINISTRATION';
-//             if (!isAdmin) {
-//                 return res.status(403).json({ error: 'Not authorized to assign trips' });
-//             }
-//         }
-
-//         // Verify car is available
-//         const car = await prisma.car.findUnique({
-//             where: { id: carId }
-//         });
-
-//         if (!car || car.status !== 'AVAILABLE') {
-//             return res.status(400).json({ error: 'Selected car is not available' });
-//         }
-
-//         // Verify driver is active
-//         const driver = await prisma.driver.findUnique({
-//             where: { id: driverId }
-//         });
-
-//         if (!driver || driver.status !== 'ACTIVE') {
-//             return res.status(400).json({ error: 'Selected driver is not active' });
-//         }
-
-//         // Update trip request with car and driver
-//         const updatedTripRequest = await prisma.tripRequest.update({
-//             where: { id: parseInt(id) },
-//             data: {
-//                 carId,
-//                 driverId,
-//                 status: 'ASSIGNED',
-//                 adminApproval: true,
-//                 kmAtDeparture,
-//             },
-//             include: {
-//                 car: true,
-//                 driver: true,
-//                 department:true,
-//                 employee: {
-//                     include: {
-//                         user: true,
-//                         reportsTo:true
-//                     }
-//                 }
-//             }
-//         });
-
-//         // Update car and driver status
-//         // await prisma.car.update({
-//         //     where: { id: carId },
-//         //     data: { status: 'IN_USE' }
-//         // });
-
-//         // await prisma.driver.update({
-//         //     where: { id: driverId },
-//         //     data: { status: 'ASSIGNED' }
-//         // });
-
-
-
-//         await sendEmail(
-//             tripRequest.employee.user.email,
-//             'Trip Request Car and Driver Assigned',
-//             `Your trip request has been assigned a car and driver.`,
-//             `
-//                 <!DOCTYPE html>
-//                 <html>
-//                 <head>
-//                     <style>
-//                         body {
-//                             font-family: Arial, sans-serif;
-//                             line-height: 1.6;
-//                             color: #333333;
-//                             max-width: 600px;
-//                             margin: 0 auto;
-//                         }
-//                         .email-container {
-//                             padding: 20px;
-//                             background-color: #f9f9f9;
-//                         }
-//                         .header {
-//                             background-color: #008080;
-//                             color: white;
-//                             padding: 20px;
-//                             text-align: center;
-//                             border-radius: 5px 5px 0 0;
-//                         }
-//                         .content {
-//                             background-color: white;
-//                             padding: 20px;
-//                             border-radius: 0 0 5px 5px;
-//                             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-//                         }
-//                         .detail-item {
-//                             margin: 15px 0;
-//                             padding: 10px;
-//                             background-color: #f5f5f5;
-//                             border-left: 4px solid #008080;
-//                         }
-//                         .footer {
-//                             margin-top: 20px;
-//                             text-align: center;
-//                             color: #666666;
-//                             font-size: 14px;
-//                         }
-//                         .important-note {
-//                             background-color: #fff3cd;
-//                             border-left: 4px solid #ffc107;
-//                             padding: 10px;
-//                             margin-top: 20px;
-//                         }
-//                     </style>
-//                 </head>
-//                 <body>
-//                     <div class="email-container">
-//                         <div class="header">
-//                             <h1 style="margin: 0;">Trip Request Approved & Assigned</h1>
-//                         </div>
-                        
-//                         <div class="content">
-//                             <p>Dear ${tripRequest.employee.user.firstName},</p>
-                            
-//                             <p>Your trip request has been approved and the necessary resources have been assigned. Please review the following details for your upcoming trip:</p>
-                            
-//                             <div class="detail-item">
-//                                 <strong>Trip Details:</strong><br>
-//                                 Destination: ${tripRequest.itinerary}<br>
-//                                 Departure Date: ${new Date(tripRequest.departureDate).toLocaleDateString()}<br>
-//                                 Initial Km Reading: ${kmAtDeparture} km
-//                             </div>
-
-//                             <div class="detail-item">
-//                                 <strong>Assigned Vehicle:</strong><br>
-//                                 Make/Model: ${car.model}<br>
-//                                 License Plate: ${car.licensePlate}<br>
-//                                 Color: ${car.color}
-//                             </div>
-                            
-//                             <div class="detail-item">
-//                                 <strong>Assigned Driver:</strong><br>
-//                                 Name: ${driver.firstName} ${driver.lastName}<br>
-//                                 Contact Number: ${driver.phoneNumber}<br>
-//                                 Badge ID: ${driver.badgeId}
-//                             </div>
-                            
-//                             <div class="important-note">
-//                                 <strong>Important Reminders:</strong>
-//                                 <ul style="margin: 5px 0 0 0; padding-left: 20px;">
-//                                     <li>Please be ready 15 minutes before your scheduled departure time</li>
-//                                     <li>Ensure you have all necessary documentation for your trip</li>
-//                                     <li>Contact your driver if you need to make any last-minute adjustments</li>
-//                                     <li>Remember to complete a trip report upon return</li>
-//                                 </ul>
-//                             </div>
-//                         </div>
-                        
-//                         <div class="footer">
-//                             <p>For any questions or changes, please contact the Fleet Management Office.</p>
-//                             <p>© ${new Date().getFullYear()} Rwacof Exports Ltd. All rights reserved.</p>
-//                         </div>
-//                     </div>
-//                 </body>
-//                 </html>
-// `,
-
-//         );
-
-//         const managementEmails = [
-//             'md@sucafina1.com',
-//             'coo@sucafina1.com',
-//             'finance@sucafina1.com'
-//         ];
-
-//         console.log('Sending email to management:', managementEmails);
-//         console.log(tripRequest);
-//         console.log(updatedTripRequest);
-
-//         await Promise.all([
-//             sendEmail(
-//                 managementEmails.join(','), // Join emails with commas for multiple recipients
-//                 'Trip Request Approved by Supervisor',
-//                 `A trip request by ${tripRequest.employee.user.firstName} ${tripRequest.employee.user.lastName} has been approved by their supervisor.`,
-//                `
-//                 <!DOCTYPE html>
-//                 <html>
-//                 <head>
-//                     <style>
-//                         body {
-//                             font-family: Arial, sans-serif;
-//                             line-height: 1.6;
-//                             color: #333333;
-//                             max-width: 600px;
-//                             margin: 0 auto;
-//                         }
-//                         .email-container {
-//                             padding: 20px;
-//                             background-color: #f9f9f9;
-//                         }
-//                         .header {
-//                             background-color: #008080;
-//                             color: white;
-//                             padding: 20px;
-//                             text-align: center;
-//                             border-radius: 5px 5px 0 0;
-//                         }
-//                         .content {
-//                             background-color: white;
-//                             padding: 20px;
-//                             border-radius: 0 0 5px 5px;
-//                             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-//                         }
-//                         .info-section {
-//                             margin: 15px 0;
-//                             padding: 15px;
-//                             background-color: #f5f5f5;
-//                             border-left: 4px solid #008080;
-//                         }
-//                         .footer {
-//                             margin-top: 20px;
-//                             text-align: center;
-//                             color: #666666;
-//                             font-size: 14px;
-//                         }
-//                     </style>
-//                 </head>
-//                 <body>
-//                     <div class="email-container">
-//                         <div class="header">
-//                             <h1 style="margin: 0;">Trip Request Management Notification</h1>
-//                         </div>
-                        
-//                         <div class="content">
-//                             <p>This is to notify you that a new trip request has been approved and assigned.</p>
-                            
-//                             <div class="info-section">
-//                                 <strong>Employee Information:</strong><br>
-//                                 Name: ${tripRequest.employee.user.firstName} ${tripRequest.employee.user.lastName}<br>
-//                                 Department: ${tripRequest.department.name || 'Not specified'}<br>
-//                             </div>
-                            
-//                             <div class="info-section">
-//                                 <strong>Trip Details:</strong><br>
-//                                 Destination: ${updatedTripRequest.itinerary}<br>
-//                                 Purpose: ${updatedTripRequest.reason || 'Not specified'}<br>
-//                                 Departure Date: ${new Date(updatedTripRequest.departureDate).toLocaleDateString()}<br>
-//                                 Expected Return: ${new Date(updatedTripRequest.returnDate).toLocaleDateString()}<br>
-//                                 Initial Km: ${kmAtDeparture} km
-//                             </div>
-
-//                             <div class="info-section">
-//                                 <strong>Resource Assignment:</strong><br>
-//                                 Vehicle: ${car.model} (${car.licensePlate})<br>
-//                                 Driver: ${driver.firstName} ${driver.lastName}<br>
-//                                 Expected Duration: ${updatedTripRequest.expectedDuration || 'Not specified'} days
-//                             </div>
-//                         </div>
-                        
-//                         <div class="footer">
-//                             <p>This notification is for your records. The trip has been approved and resources have been assigned.</p>
-//                             <p>© ${new Date().getFullYear()} Rwacof Exports Ltd. All rights reserved.</p>
-//                         </div>
-//                     </div>
-//                 </body>
-//                 </html>
-//                 `
-//             )
-//         ]).catch(error => {
-//             console.error('Error sending management emails:', error);
-//             // Continue with the response even if management email fails
-//             // but log the error for debugging
-//         });
-
-
-
-//         res.json(updatedTripRequest);
-//     } catch (error) {
-//         next(error);
-//     }
-// });
-
-// Get all trip requests with detailed includes
-
-
-// Assign car and driver on trip request
 router.patch('/:id/assign', async (req, res, next) => {
     try {
         const { id } = req.params;
