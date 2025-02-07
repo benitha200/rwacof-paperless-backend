@@ -72,6 +72,95 @@ const isAdmin = (req, res, next) => {
   next();
 };
 
+router.post('/employee/bulk-upload', async (req, res) => {
+  try {
+    const employeesData = req.body;
+    const departments = await prisma.department.findMany();
+    const failedEntries = [];
+
+    const processedEmployees = await prisma.$transaction(async (tx) => {
+      const results = [];
+
+      for (const employeeInput of employeesData) {
+        try {
+          // Find department by name
+          const department = departments.find(d => d.name === employeeInput.department);
+
+          // Check if user already exists
+          let existingUser = await tx.user.findUnique({
+            where: { email: employeeInput.email }
+          });
+
+          // If user doesn't exist, create user
+          if (!existingUser) {
+            const randomPassword = generateRandomPassword();
+            const hashedPassword = await bcrypt.hash(randomPassword, 10);
+
+            existingUser = await tx.user.create({
+              data: {
+                email: employeeInput.email,
+                password: hashedPassword,
+                firstName: employeeInput.firstName,
+                lastName: employeeInput.lastName,
+                role: 'EMPLOYEE'
+              }
+            });
+          }
+
+          // Check if employee already exists for this user
+          let existingEmployee = await tx.employee.findUnique({
+            where: { userId: existingUser.id }
+          });
+
+          // Prepare employee data
+          const employeeData = {
+            userId: existingUser.id,
+            employeeNumber: existingEmployee?.employeeNumber || `RCF-${existingUser.id}`,
+            departmentId: department?.id,
+            designation: employeeInput.designation,
+            dateOfBirth: employeeInput.dateOfBirth ? new Date(employeeInput.dateOfBirth) : undefined,
+            gender: employeeInput.gender,
+            phoneNumber: employeeInput.phoneNumber,
+            address: employeeInput.address,
+            status: employeeInput.status || 'ACTIVE'
+          };
+
+          if (existingEmployee) {
+            // Update existing employee
+            const updatedEmployee = await tx.employee.update({
+              where: { id: existingEmployee.id },
+              data: employeeData
+            });
+            results.push({ user: existingUser, employee: updatedEmployee });
+          } else {
+            // Create new employee
+            const newEmployee = await tx.employee.create({
+              data: employeeData
+            });
+            results.push({ user: existingUser, employee: newEmployee });
+          }
+        } catch (error) {
+          failedEntries.push({ 
+            data: employeeInput, 
+            error: error.message 
+          });
+        }
+      }
+
+      return results;
+    });
+
+    res.status(201).json({
+      success: processedEmployees.length,
+      failed: failedEntries.length,
+      failedEntries
+    });
+  } catch (error) {
+    console.error('Bulk employee upload error:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
 // register an employee
 
 router.post('/register-employee', async (req, res) => {
@@ -250,8 +339,8 @@ router.put('/employee/:id', async (req, res) => {
     });
 
     // Remove sensitive information before sending response
-    const { password: _, ...userResponse } = updatedData.user;
-    // const { userId: __, ...employeeResponse } = updatedData.employee;
+    // const { password: _, ...userResponse } = updatedData.user;
+    const { userId: __, ...employeeResponse } = updatedData.employee;
 
     res.json({
       // user: userResponse,
@@ -262,6 +351,7 @@ router.put('/employee/:id', async (req, res) => {
     res.status(400).json({ error: error.message });
   }
 });
+
 
 // Get employee details (updated to include manager information)
 router.get('/employee/:id', authenticateUser, async (req, res) => {
