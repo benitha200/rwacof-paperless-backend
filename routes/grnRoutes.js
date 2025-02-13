@@ -7,6 +7,7 @@ const nodemailer = require('nodemailer');
 require('dotenv').config();
 const authenticateUser=require('./UserRoutes');
 const GRNApprovalEmail = require('../src/components/ui/GRNApprovalEmail');
+const { ClientSecretCredential } = require('@azure/identity');
 
 const validateGRN = [
   body('receivedDate').isISO8601().toDate().withMessage('Invalid date format'),
@@ -21,6 +22,60 @@ const validateGRN = [
   body('currentStep').isInt({ min: 0, max: 4 }).withMessage('Invalid current step'),
 ];
 
+const tenantId = process.env.AZURE_TENANT_ID;
+const clientId = process.env.AZURE_CLIENT_ID;
+const clientSecret = process.env.AZURE_CLIENT_SECRET;
+const senderEmail = process.env.EMAIL_USER;
+
+// Create an OAuth2 credential instance
+const credential = new ClientSecretCredential(tenantId, clientId, clientSecret);
+
+async function getAccessToken() {
+  const tokenResponse = await credential.getToken("https://graph.microsoft.com/.default");
+  return tokenResponse.token;
+}
+
+
+async function sendEmailGraph(to, subject, htmlContent) {
+  try {
+    const accessToken = await getAccessToken();
+
+    const emailData = {
+      message: {
+        subject: subject,
+        body: {
+          contentType: "HTML",
+          content: htmlContent,
+        },
+        toRecipients: [
+          {
+            emailAddress: {
+              address: to,
+            },
+          },
+        ],
+      },
+    };
+
+    const response = await fetch(`https://graph.microsoft.com/v1.0/users/${senderEmail}/sendMail`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(emailData),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to send email: ${await response.text()}`);
+    }
+
+    console.log(`✅ Email sent successfully to ${to}`);
+  } catch (error) {
+    console.error("❌ Error sending email:", error);
+    throw error;
+  }
+}
 
 
 router.post('/', authenticateUser, validateGRN, async (req, res) => {
@@ -64,6 +119,8 @@ router.post('/', authenticateUser, validateGRN, async (req, res) => {
       remarks: grnData.remarks,
       status: grnData.status || 'pending',
       currentStep: grnData.currentStep || 0,
+      contractRef: grnData.contractRef,
+      price: grnData.price ? parseFloat(grnData.price) : null,
       preparedBy: { connect: { id: parseInt(grnData.preparedById) } },
       // checkedBy: grnData.checkedById ? { connect: { id: parseInt(grnData.checkedById) } } : undefined,
       // authorizedBy: grnData.authorizedById ? { connect: { id: parseInt(grnData.authorizedById) } } : undefined,
@@ -164,28 +221,66 @@ async function sendEmailToNextPerson(currentStep, grnId) {
       role: nextRole
     });
 
-    const transporter = nodemailer.createTransport({
-      host: 'smtp.gmail.com',
-      port: 587,
-      secure: false,
-      auth: {
-        user: "benithalouange@gmail.com",
-        pass: "pewa uhlk ydil sods",
-      },
-    });
-
-    await transporter.sendMail({
-      from: '"GRN System" <benithalouange@gmail.com>',
-      to: user.email,
-      subject: `GRN ${grnId} Ready for Your Approval`,
-      html: emailHtml,
-    });
+    await sendEmailGraph(
+      user.email,
+      `GRN ${grnId} Ready for Your Approval`,
+      emailHtml
+    );
 
     console.log(`Email sent to ${user.email} for GRN ${grnId}`);
   } catch (error) {
     console.error('Error sending email:', error);
   }
 }
+
+
+// async function sendEmailToNextPerson(currentStep, grnId) {
+//   const roles = ['WeightBridgeManager', 'QualityManager', 'COO', 'ManagingDirector', 'Finance'];
+//   const nextRole = roles[currentStep + 1];
+
+//   if (!nextRole) {
+//     console.log('GRN process completed');
+//     return;
+//   }
+
+//   try {
+//     const user = await prisma.user.findFirst({
+//       where: { role: nextRole },
+//     });
+
+//     if (!user) {
+//       console.error(`User with role ${nextRole} not found`);
+//       return;
+//     }
+
+//     const emailHtml = GRNApprovalEmail({
+//       grnId: grnId,
+//       recipientName: user.name,
+//       role: nextRole
+//     });
+
+//     const transporter = nodemailer.createTransport({
+//       host: 'smtp.gmail.com',
+//       port: 587,
+//       secure: false,
+//       auth: {
+//         user: "benithalouange@gmail.com",
+//         pass: "pewa uhlk ydil",
+//       },
+//     });
+
+//     await transporter.sendMail({
+//       from: '"GRN System" <benithalouange@gmail.com>',
+//       to: user.email,
+//       subject: `GRN ${grnId} Ready for Your Approval`,
+//       html: emailHtml,
+//     });
+
+//     console.log(`Email sent to ${user.email} for GRN ${grnId}`);
+//   } catch (error) {
+//     console.error('Error sending email:', error);
+//   }
+// }
 
 
 

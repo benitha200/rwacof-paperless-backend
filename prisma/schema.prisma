@@ -28,7 +28,6 @@ model Employee {
   id                    Int       @id @default(autoincrement())
   userId                Int       @unique
   employeeNumber        String    @unique
-  // department            String
   designation           String
   dateOfBirth           DateTime?
   gender                String?
@@ -97,6 +96,18 @@ model TripRequest {
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
   
+}
+
+model Department {
+  id            Int       @id @default(autoincrement())
+  name          String    @unique
+  description   String?
+  headOfDepartmentId Int? 
+  headOfDepartment   Employee? @relation("DepartmentHead", fields: [headOfDepartmentId], references: [id])
+  employees     Employee[]
+  status        String    @default("ACTIVE")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 }
 
 model Car {
@@ -319,6 +330,8 @@ model GRN {
   remarks         String?
   status          String
   currentStep     Int
+  contractRef      String?
+  price           Float?
   preparedById    Int
   preparedBy      User     @relation("PreparedBy", fields: [preparedById], references: [id])
   checkedById     Int?
@@ -331,14 +344,3 @@ model GRN {
   updatedAt       DateTime @updatedAt
 }
 
-model Department {
-  id            Int       @id @default(autoincrement())
-  name          String    @unique
-  description   String?
-  headOfDepartmentId Int? 
-  headOfDepartment   Employee? @relation("DepartmentHead", fields: [headOfDepartmentId], references: [id])
-  employees     Employee[]
-  status        String    @default("ACTIVE")
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-}
