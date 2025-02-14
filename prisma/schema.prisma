@@ -319,14 +319,14 @@ model GRN {
   lessQualityKg   Int
   netWeightKg     Int
   cheque_in_favor_of String
-  payment_weight  String
-  payment_quantity Int
-  payment_rate    Int
-  payment_amount  Int
-  paymentDate     DateTime
+  payment_weight  String?
+  payment_quantity Int?
+  payment_rate    Int?
+  payment_amount  Int?
+  paymentDate     DateTime?
   drAc            Int?
   qualityGrade    String
-  rate            Int
+  exchange_rate            Int?
   remarks         String?
   status          String
   currentStep     Int
