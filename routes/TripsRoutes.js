@@ -575,7 +575,6 @@ router.patch('/:id/assign', async (req, res, next) => {
                                 <strong>Trip Details:</strong><br>
                                 Destination: ${tripRequest.itinerary}<br>
                                 Departure Date: ${new Date(tripRequest.departureDate).toLocaleDateString()}<br>
-                                Initial Km Reading: ${kmAtDeparture} km
                             </div>
 
                             <div class="detail-item">
@@ -613,7 +612,8 @@ router.patch('/:id/assign', async (req, res, next) => {
                     'md@sucafina1.com',
                     'coo@sucafina1.com',
                     'finance@sucafina1.com',
-                    'ibl@sucafina.com'
+                    'ibl@sucafina.com',
+                    'james.kayiranga@sucafina.com'
                 ];
 
                 console.log('Sending email to management:', managementEmails);
