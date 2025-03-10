@@ -8,19 +8,19 @@ datasource db {
 }
 
 model User {
-  id             Int      @id @default(autoincrement())
-  email          String   @unique
+  id             Int        @id @default(autoincrement())
+  email          String     @unique
   password       String
   firstName      String
   lastName       String?
   role           String
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
   shipments      Shipment[]
-  preparedGRNs   GRN[] @relation("PreparedBy")
-  checkedGRNs    GRN[] @relation("CheckedBy")
-  authorizedGRNs GRN[] @relation("AuthorizedBy")
-  receivedGRNs   GRN[] @relation("ReceivedBy")
+  preparedGRNs   GRN[]      @relation("PreparedBy")
+  checkedGRNs    GRN[]      @relation("CheckedBy")
+  authorizedGRNs GRN[]      @relation("AuthorizedBy")
+  receivedGRNs   GRN[]      @relation("ReceivedBy")
   employee       Employee?
 }
 
@@ -40,307 +40,301 @@ model Employee {
   bankAccountNumber     String?
   panNumber             String?
   status                String    @default("ACTIVE")
-  
-  reportsToId           Int?
-  reportsTo             Employee?  @relation("ManagerToReports", fields: [reportsToId], references: [id])
-  directReports         Employee[] @relation("ManagerToReports")
-  
-  user                  User      @relation(fields: [userId], references: [id])
-  tripRequests          TripRequest[]
 
-  departmentId          Int?
-  department            Department? @relation(fields: [departmentId], references: [id])
-  headOfDepartment      Department[] @relation("DepartmentHead")
-  
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
+  reportsToId   Int?
+  reportsTo     Employee?  @relation("ManagerToReports", fields: [reportsToId], references: [id])
+  directReports Employee[] @relation("ManagerToReports")
+
+  user         User          @relation(fields: [userId], references: [id])
+  tripRequests TripRequest[]
+
+  departmentId     Int?
+  department       Department?  @relation(fields: [departmentId], references: [id])
+  headOfDepartment Department[] @relation("DepartmentHead")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model TripRequest {
-  id                Int      @id @default(autoincrement())
-  employeeId        Int
-  requestType       String   @default("LOCAL-KIGALI")
-  
+  id          Int    @id @default(autoincrement())
+  employeeId  Int
+  requestType String @default("LOCAL-KIGALI")
+
   // Existing fields
-  reason           String
-  itinerary        String
-  vehiclePlate     String?
-  departureDate    DateTime
-  returnDate       DateTime
-  kmAtDeparture    Int?
-  kmAtArrival      Int?
-  status           String    @default("PENDING")
-  supervisorApproval Boolean @default(true)
-  adminApproval    Boolean   @default(false)
-  
+  reason             String
+  itinerary          String
+  vehiclePlate       String?
+  departureDate      DateTime
+  returnDate         DateTime
+  kmAtDeparture      Int?
+  kmAtArrival        Int?
+  status             String   @default("PENDING")
+  supervisorApproval Boolean  @default(true)
+  adminApproval      Boolean  @default(false)
+
   // New fields
-  unitDepartment   String @default("Data and Systems Department")
-  postPosition     String?   
-  transportMeans   String?   
-  departureTime    String  @default("12:00 AM") 
-  returnTime       String?   
-  
+  unitDepartment String  @default("Data and Systems Department")
+  postPosition   String?
+  transportMeans String?
+  departureTime  String  @default("12:00 AM")
+  returnTime     String?
+
   // Authorization fields
-  authorizedById   Int?      
-  authorizedByName String?   
-  authorizedAt     DateTime? 
-  
+  authorizedById   Int?
+  authorizedByName String?
+  authorizedAt     DateTime?
+
   // Existing relations
-  employee         Employee  @relation(fields: [employeeId], references: [id])
-  car              Car?      @relation(fields: [carId], references: [id])
-  carId            Int?
-  driver           Driver?   @relation(fields: [driverId], references: [id])
-  driverId         Int?
-  
+  employee Employee @relation(fields: [employeeId], references: [id])
+  car      Car?     @relation(fields: [carId], references: [id])
+  carId    Int?
+  driver   Driver?  @relation(fields: [driverId], references: [id])
+  driverId Int?
+
+  // Departure confirmation field
+  departureConfirmedAt DateTime?
+
   // Timestamps
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Department {
-  id            Int       @id @default(autoincrement())
-  name          String    @unique
-  description   String?
-  headOfDepartmentId Int? 
-  headOfDepartment   Employee? @relation("DepartmentHead", fields: [headOfDepartmentId], references: [id])
-  employees     Employee[]
-  status        String    @default("ACTIVE")
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id                 Int        @id @default(autoincrement())
+  name               String     @unique
+  description        String?
+  headOfDepartmentId Int?
+  headOfDepartment   Employee?  @relation("DepartmentHead", fields: [headOfDepartmentId], references: [id])
+  employees          Employee[]
+  status             String     @default("ACTIVE")
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
 }
 
 model Car {
-  id           Int       @id @default(autoincrement())
+  id           Int    @id @default(autoincrement())
   make         String
   model        String
-  licensePlate String    @unique
+  licensePlate String @unique
   year         Int
   mileage      Int
-  status       String    @default("AVAILABLE")
+  status       String @default("AVAILABLE")
 
-  driver       Driver?   @relation("CarDriver") // Removed fields and references
+  driver       Driver?       @relation("CarDriver") // Removed fields and references
   tripRequests TripRequest[]
 
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Driver {
-  id            Int       @id @default(autoincrement())
+  id            Int    @id @default(autoincrement())
   //employeeId    Int       @unique
   firstName     String
   lastName      String
-  licenseNumber String    @unique
+  licenseNumber String @unique
   phoneNumber   String
   address       String
-  status        String    @default("ACTIVE")
+  status        String @default("ACTIVE")
 
-  carId         Int?      @unique
-  car           Car?      @relation("CarDriver", fields: [carId], references: [id]) // Only Driver specifies fields and references
+  carId Int? @unique
+  car   Car? @relation("CarDriver", fields: [carId], references: [id]) // Only Driver specifies fields and references
 
-  tripRequests  TripRequest[]
+  tripRequests TripRequest[]
 
   //employee      Employee  @relation(fields: [employeeId], references: [id])
 
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
-
-
 model Contract {
-  id              Int       @id @default(autoincrement())
-  contractNumber  String    @unique
-  clientName      String
-  startDate       DateTime
-  endDate         DateTime
-  totalQuantity   Int
-  quantityUnit    String
-  price           Decimal   @db.Decimal(10, 2)
-  currency        String    @default("USD")
-  terms           String    @db.Text
-  status          String    @default("ACTIVE")
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  shipments       Shipment[]
+  id             Int        @id @default(autoincrement())
+  contractNumber String     @unique
+  clientName     String
+  startDate      DateTime
+  endDate        DateTime
+  totalQuantity  Int
+  quantityUnit   String
+  price          Decimal    @db.Decimal(10, 2)
+  currency       String     @default("USD")
+  terms          String     @db.Text
+  status         String     @default("ACTIVE")
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  shipments      Shipment[]
 }
 
 model Shipment {
-  id                Int      @id @default(autoincrement())
+  id                Int                @id @default(autoincrement())
   containerNo       String
   truckNo           String
   lotNo             String?
-  description       String   @db.Text
+  description       String             @db.Text
   quantity          Int?
   quantityUnit      String?
-  netWeight         Decimal?  @db.Decimal(10, 2)
+  netWeight         Decimal?           @db.Decimal(10, 2)
   netWeightUnit     String?
-  amount            Decimal?  @db.Decimal(10, 2)
-  price             Decimal?  @db.Decimal(10, 2)
+  amount            Decimal?           @db.Decimal(10, 2)
+  price             Decimal?           @db.Decimal(10, 2)
   consignee         String?
-  date              DateTime @default(now())
+  date              DateTime           @default(now())
   status            String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
   userId            Int
-  forwarder         String   @default("MSK")
+  forwarder         String             @default("MSK")
   contractId        Int
-  user              User     @relation(fields: [userId], references: [id])
-  contract          Contract @relation(fields: [contractId], references: [id])
+  user              User               @relation(fields: [userId], references: [id])
+  contract          Contract           @relation(fields: [contractId], references: [id])
   loadingTallySheet LoadingTallySheet?
   invoice           Invoice?
   vgm               VGM?
   stuffingReport    StuffingReport?
 }
 
-
-
 model LoadingTallySheet {
-  id           Int      @id @default(autoincrement())
-  shipmentId   Int      @unique
-  loadingDay   DateTime
-  sl           String
-  forwarder    String
-  rssSsrwSprw  String
-  plateNo      String
-  tare         Decimal  @db.Decimal(10, 2)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  shipment     Shipment @relation(fields: [shipmentId], references: [id])
+  id          Int      @id @default(autoincrement())
+  shipmentId  Int      @unique
+  loadingDay  DateTime
+  sl          String
+  forwarder   String
+  rssSsrwSprw String
+  plateNo     String
+  tare        Decimal  @db.Decimal(10, 2)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  shipment    Shipment @relation(fields: [shipmentId], references: [id])
 }
 
 model Invoice {
-  id                 Int      @id @default(autoincrement())
-  shipmentId         Int      @unique
-  seller             String
-  sellerAddress      String   @db.Text
-  consignee          String
-  consigneeAddress   String   @db.Text
-  billOfLadingNo     String
+  id                  Int       @id @default(autoincrement())
+  shipmentId          Int       @unique
+  seller              String
+  sellerAddress       String    @db.Text
+  consignee           String
+  consigneeAddress    String    @db.Text
+  billOfLadingNo      String
   authorizedSignature String
-  InvoiceDate        DateTime?
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-  shipment           Shipment @relation(fields: [shipmentId], references: [id])
+  InvoiceDate         DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  shipment            Shipment  @relation(fields: [shipmentId], references: [id])
 }
 
 model VGM {
-  id               Int      @id @default(autoincrement())
-  shipmentId       Int      @unique
-  bookingBlNumber  String
-  containerNumber  String   
+  id                Int         @id @default(autoincrement())
+  shipmentId        Int         @unique
+  bookingBlNumber   String
+  containerNumber   String
   containerTypeSize String
-  vgmKgs           Decimal  @db.Decimal(10, 2)
-  cargoGwKgs       Decimal  @db.Decimal(10, 2)
-  method           String
-  remarks          String?  @db.Text
-  vesselName       String
-  voyageNumber     String
-  authorizedPerson String
-  position         String
-  contactNumber    String
-  signatureDate    DateTime
-  kmaApprovalNo    String
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  shipment         Shipment @relation(fields: [shipmentId], references: [id])
-  containers       Container[]
+  vgmKgs            Decimal     @db.Decimal(10, 2)
+  cargoGwKgs        Decimal     @db.Decimal(10, 2)
+  method            String
+  remarks           String?     @db.Text
+  vesselName        String
+  voyageNumber      String
+  authorizedPerson  String
+  position          String
+  contactNumber     String
+  signatureDate     DateTime
+  kmaApprovalNo     String
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  shipment          Shipment    @relation(fields: [shipmentId], references: [id])
+  containers        Container[]
 }
 
 model StuffingReport {
-  id               Int      @id @default(autoincrement())
-  shipmentId       Int      @unique
-  client           String
-  mandate          String   @db.Text
-  product          String
-  numberOfBags     Int
-  packing          String
-  vesselName       String
-  billOfLadingNo   String
-  place            String
-  container        String
-  stuffingStart    DateTime
-  stuffingEnd      DateTime
-  tempSealTime     DateTime
-  finalSealTime    DateTime
-  containerCondition String  @db.Text
-  lots             String
-  illyId           String
-  authorizedPerson String
-  signatureDate    DateTime
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  shipment         Shipment @relation(fields: [shipmentId], references: [id])
+  id                 Int      @id @default(autoincrement())
+  shipmentId         Int      @unique
+  client             String
+  mandate            String   @db.Text
+  product            String
+  numberOfBags       Int
+  packing            String
+  vesselName         String
+  billOfLadingNo     String
+  place              String
+  container          String
+  stuffingStart      DateTime
+  stuffingEnd        DateTime
+  tempSealTime       DateTime
+  finalSealTime      DateTime
+  containerCondition String   @db.Text
+  lots               String
+  illyId             String
+  authorizedPerson   String
+  signatureDate      DateTime
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  shipment           Shipment @relation(fields: [shipmentId], references: [id])
 
-  image1             String?
-  image2             String?
-  image3             String?
-  image4             String?
-  image5             String?
-  image6             String?
-  image7             String?
-  image8             String?
+  image1 String?
+  image2 String?
+  image3 String?
+  image4 String?
+  image5 String?
+  image6 String?
+  image7 String?
+  image8 String?
 }
 
 model Container {
-  id               Int      @id @default(autoincrement())
-  vgmId            Int
-  containerNumber  String
+  id                Int     @id @default(autoincrement())
+  vgmId             Int
+  containerNumber   String
   containerTypeSize String
-  vgmKgs           Decimal  @db.Decimal(10, 2)
-  cargoGwKgs       Decimal  @db.Decimal(10, 2)
-  method           String
-  remarks          String?  @db.Text
-  vgm              VGM      @relation(fields: [vgmId], references: [id])
+  vgmKgs            Decimal @db.Decimal(10, 2)
+  cargoGwKgs        Decimal @db.Decimal(10, 2)
+  method            String
+  remarks           String? @db.Text
+  vgm               VGM     @relation(fields: [vgmId], references: [id])
 }
-
-
-
 
 model GRN {
-  id              Int      @id @default(autoincrement())
-  receivedDate    DateTime
-  supplierName    String
-  supplierAddress String
-  plate_no        String
-  wbridgeRef      String
-  moisture        Float
-  parch           Float?
-  coffee_type     String
-  bags            Int
-  quantity        Int
-  quantityUnit    String
-  totalWeight     Float
-  weightUnit      String
-  lessNoOfBags    Int
-  subGrossKg      Int
-  lessMoistureKg  Int
-  lessQualityKg   Int
-  netWeightKg     Int
+  id                 Int       @id @default(autoincrement())
+  receivedDate       DateTime
+  supplierName       String
+  supplierAddress    String
+  plate_no           String
+  wbridgeRef         String
+  moisture           Float
+  parch              Float?
+  coffee_type        String
+  bags               Int
+  quantity           Int
+  quantityUnit       String
+  totalWeight        Float
+  weightUnit         String
+  lessNoOfBags       Int
+  subGrossKg         Int
+  lessMoistureKg     Int
+  lessQualityKg      Int
+  netWeightKg        Int
   cheque_in_favor_of String
-  payment_weight  String?
-  payment_quantity Int?
-  payment_rate    Int?
-  payment_amount  Int?
-  paymentDate     DateTime?
-  drAc            Int?
-  qualityGrade    String
-  exchange_rate            Int?
-  remarks         String?
-  status          String
-  currentStep     Int
-  contractRef      String?
-  price           Float?
-  preparedById    Int
-  preparedBy      User     @relation("PreparedBy", fields: [preparedById], references: [id])
-  checkedById     Int?
-  checkedBy       User?    @relation("CheckedBy", fields: [checkedById], references: [id])
-  authorizedById  Int?
-  authorizedBy    User?    @relation("AuthorizedBy", fields: [authorizedById], references: [id])
-  receivedById    Int?
-  receivedBy      User?    @relation("ReceivedBy", fields: [receivedById], references: [id])
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  payment_weight     String?
+  payment_quantity   Int?
+  payment_rate       Int?
+  payment_amount     Int?
+  paymentDate        DateTime?
+  drAc               Int?
+  qualityGrade       String
+  exchange_rate      Int?
+  remarks            String?
+  status             String
+  currentStep        Int
+  contractRef        String?
+  price              Float?
+  preparedById       Int
+  preparedBy         User      @relation("PreparedBy", fields: [preparedById], references: [id])
+  checkedById        Int?
+  checkedBy          User?     @relation("CheckedBy", fields: [checkedById], references: [id])
+  authorizedById     Int?
+  authorizedBy       User?     @relation("AuthorizedBy", fields: [authorizedById], references: [id])
+  receivedById       Int?
+  receivedBy         User?     @relation("ReceivedBy", fields: [receivedById], references: [id])
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 }
-

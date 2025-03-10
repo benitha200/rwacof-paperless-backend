@@ -920,6 +920,73 @@ router.patch('/:id/assign', async (req, res, next) => {
     }
 });
 
+router.put('/:id/approve-exit', async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+
+        if (status !== 'DEPARTED') {
+            return res.status(400).json({ error: 'Invalid status for exit approval. Status must be DEPARTED.' });
+        }
+
+        // Find the trip request to verify it exists and is in the right state
+        const tripRequest = await prisma.tripRequest.findUnique({
+            where: { id: parseInt(id) },
+            include: {
+                employee: {
+                    include: {
+                        user: true
+                    }
+                },
+                car: true,
+                driver: true
+            }
+        });
+
+        if (!tripRequest) {
+            return res.status(404).json({ error: 'Trip request not found' });
+        }
+
+        if (tripRequest.status !== 'ASSIGNED') {
+            return res.status(400).json({ 
+                error: 'Trip cannot be authorized for departure. It must be in ASSIGNED status.'
+            });
+        }
+
+        // Update trip status to DEPARTED
+        const updatedTripRequest = await prisma.tripRequest.update({
+            where: { id: parseInt(id) },
+            data: {
+                status: 'DEPARTED',
+                departureConfirmedAt: new Date()
+            },
+            include: {
+                employee: {
+                    include: {
+                        user: true
+                    }
+                },
+                car: true,
+                driver: true
+            }
+        });
+
+        // Send response
+        res.json(updatedTripRequest);
+
+        // Optional: Send notification emails about departure
+        try {
+            // Send email to relevant stakeholders if needed
+            // This could be similar to the email sending in the assign endpoint
+        } catch (emailError) {
+            console.error('Error sending departure notification emails:', emailError);
+        }
+
+    } catch (error) {
+        next(error);
+    }
+});
+
 router.get('/', async (req, res, next) => {
     try {
         const tripRequests = await prisma.tripRequest.findMany({
