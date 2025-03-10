@@ -1,38 +1,3 @@
-// use GMAIL TO SEND EMAILS
-
-// const express = require('express');
-// const router = express.Router();
-// const { PrismaClient } = require('@prisma/client');
-// const prisma = new PrismaClient();
-// const nodemailer = require('nodemailer');
-
-// const transporter = nodemailer.createTransport({
-//     host: 'smtp.gmail.com',
-//     port: 587,
-//     secure: false,
-//     auth: {
-//         user: "benithalouange@gmail.com",
-//         pass: "pewa uhlk ydil sods",
-//     },
-// });
-
-// async function sendEmail(to, subject, text, html) {
-//     try {
-//         await transporter.sendMail({
-//             from: {
-//                 name: "Rwacof Paperless Project",
-//                 address: "benithalouange@gmail.com"
-//             },
-//             to,
-//             subject,
-//             text,
-//             html
-//         });
-//     } catch (error) {
-//         console.error('Email sending error:', error);
-//     }
-// }
-
 const express = require('express');
 const router = express.Router();
 const { PrismaClient } = require('@prisma/client');
@@ -94,6 +59,7 @@ async function sendEmail(to, subject, text, html) {
     }
 }
 
+
 // create a new trip request
 router.post('/', async (req, res, next) => {
     try {
@@ -114,8 +80,6 @@ router.post('/', async (req, res, next) => {
             return res.status(404).json({ error: 'Employee not found' });
         }
 
-      
-
         // Create trip request
         const tripRequest = await prisma.tripRequest.create({
             data: {
@@ -133,7 +97,7 @@ router.post('/', async (req, res, next) => {
         // Send response immediately
         res.status(201).json(tripRequest);
 
-        // Send email asynchronously after response is sent
+        // Send email to employee asynchronously
         sendEmail(
             employee.user.email,
             'Trip Request Submitted Successfully',
@@ -214,10 +178,241 @@ router.post('/', async (req, res, next) => {
             // You might want to log this error to your error tracking service
         });
 
+        // NEW CODE: Send notification email to the approver
+        sendEmail(
+            "paterne.mugisha@sucafina.com",
+            'New Trip Request Pending Approval',
+            `A new trip request is waiting for your approval.`,
+            `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>
+                    body {
+                        font-family: Arial, sans-serif;
+                        line-height: 1.6;
+                        color: #333333;
+                        max-width: 600px;
+                        margin: 0 auto;
+                    }
+                    .email-container {
+                        padding: 20px;
+                        background-color: #f9f9f9;
+                    }
+                    .header {
+                        background-color: #008080;
+                        color: white;
+                        padding: 20px;
+                        text-align: center;
+                        border-radius: 5px 5px 0 0;
+                    }
+                    .content {
+                        background-color: white;
+                        padding: 20px;
+                        border-radius: 0 0 5px 5px;
+                        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                    }
+                    .alert-section {
+                        margin: 15px 0;
+                        padding: 15px;
+                        background-color: #fff8e1;
+                        border-left: 4px solid #ffc107;
+                    }
+                    .details-section {
+                        margin: 15px 0;
+                        padding: 15px;
+                        background-color: #f5f5f5;
+                        border-left: 4px solid #008080;
+                    }
+                    .footer {
+                        margin-top: 20px;
+                        text-align: center;
+                        color: #666666;
+                        font-size: 14px;
+                    }
+                    .action-button {
+                        display: inline-block;
+                        background-color: #008080;
+                        color: white;
+                        padding: 10px 20px;
+                        text-decoration: none;
+                        border-radius: 4px;
+                        margin-top: 15px;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="email-container">
+                    <div class="header">
+                        <h1 style="margin: 0;">Trip Request Pending Approval</h1>
+                    </div>
+                    
+                    <div class="content">
+                        <p>Dear Approver,</p>
+                        
+                        <div class="alert-section">
+                            <strong>Action Required:</strong> A new trip request requires your approval.
+                        </div>
+                        
+                        <div class="details-section">
+                            <strong>Request Details:</strong><br>
+                            Employee: ${employee.user.firstName} ${employee.user.lastName}<br>
+                            Destination: ${tripData.itinerary || 'Not specified'}<br>
+                            Departure Date: ${tripData.departureDate || 'Not specified'}<br>
+                            Reason: ${tripData.reason || 'Not specified'}<br>
+                            Trip ID: ${tripRequest.id}
+                        </div>
+                        
+                        <p>Please review this request at your earliest convenience.</p>
+                        
+                        <div style="text-align: center;">
+                            <a href="#" class="action-button">Review Request</a>
+                        </div>
+                    </div>
+                    
+                    <div class="footer">
+                        <p>This is an automated message. Please do not reply to this email.</p>
+                        <p>© ${new Date().getFullYear()} Rwacof Exports Ltd. All rights reserved.</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            `
+        ).catch(error => {
+            console.error('Failed to send approval notification email:', error);
+            // You might want to log this error to your error tracking service
+        });
+
     } catch (error) {
         next(error);
     }
 });
+
+
+// create a new trip request
+// router.post('/', async (req, res, next) => {
+//     try {
+//         const { employeeId, ...tripData } = req.body;
+
+//         // Find the employee and their reporting manager
+//         const employee = await prisma.employee.findUnique({
+//             where: { id: employeeId },
+//             include: {
+//                 reportsTo: {
+//                     include: { user: true }
+//                 },
+//                 user: true
+//             }
+//         });
+
+//         if (!employee) {
+//             return res.status(404).json({ error: 'Employee not found' });
+//         }
+
+      
+
+//         // Create trip request
+//         const tripRequest = await prisma.tripRequest.create({
+//             data: {
+//                 ...tripData,
+//                 employee: { connect: { id: employeeId } },
+//                 status: 'PENDING',
+//                 supervisorApproval: true,
+//                 adminApproval: false
+//             }
+//         });
+
+//         console.log(employee);
+//         console.log(tripData);
+
+//         // Send response immediately
+//         res.status(201).json(tripRequest);
+
+//         // Send email asynchronously after response is sent
+//         sendEmail(
+//             employee.user.email,
+//             'Trip Request Submitted Successfully',
+//             `Your trip request has been submitted and is awaiting approval.`,
+//             `
+//             <!DOCTYPE html>
+//             <html>
+//             <head>
+//                 <style>
+//                     body {
+//                         font-family: Arial, sans-serif;
+//                         line-height: 1.6;
+//                         color: #333333;
+//                         max-width: 600px;
+//                         margin: 0 auto;
+//                     }
+//                     .email-container {
+//                         padding: 20px;
+//                         background-color: #f9f9f9;
+//                     }
+//                     .header {
+//                         background-color: #008080;
+//                         color: white;
+//                         padding: 20px;
+//                         text-align: center;
+//                         border-radius: 5px 5px 0 0;
+//                     }
+//                     .content {
+//                         background-color: white;
+//                         padding: 20px;
+//                         border-radius: 0 0 5px 5px;
+//                         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+//                     }
+//                     .info-section {
+//                         margin: 15px 0;
+//                         padding: 15px;
+//                         background-color: #f5f5f5;
+//                         border-left: 4px solid #008080;
+//                     }
+//                     .footer {
+//                         margin-top: 20px;
+//                         text-align: center;
+//                         color: #666666;
+//                         font-size: 14px;
+//                     }
+//                 </style>
+//             </head>
+//             <body>
+//                 <div class="email-container">
+//                     <div class="header">
+//                         <h1 style="margin: 0;">Trip Request Submitted</h1>
+//                     </div>
+                    
+//                     <div class="content">
+//                         <p>Dear ${employee.user.firstName},</p>
+                        
+//                         <p>Your trip request has been successfully submitted and is now awaiting approval.</p>
+                        
+//                         <div class="info-section">
+//                             <strong>Trip Details:</strong><br>
+//                             Destination: ${tripData.itinerary || 'Not specified'}<br>
+//                             Departure Date: ${tripData.departureDate || 'Not specified'}
+//                         </div>
+                        
+//                         <p>You will be notified once your trip is approved and car is assigened to you.</p>
+//                     </div>
+                    
+//                     <div class="footer">
+//                         <p>This is an automated message. Please do not reply to this email.</p>
+//                         <p>© ${new Date().getFullYear()} Rwacof Exports Ltd. All rights reserved.</p>
+//                     </div>
+//                 </div>
+//             </body>
+//             </html>
+//             `
+//         ).catch(error => {
+//             console.error('Failed to send email:', error);
+//             // You might want to log this error to your error tracking service
+//         });
+
+//     } catch (error) {
+//         next(error);
+//     }
+// });
 
 
 router.patch('/:id/supervisor-approve', async (req, res, next) => {
@@ -613,7 +808,9 @@ router.patch('/:id/assign', async (req, res, next) => {
                     'coo@sucafina1.com',
                     'finance@sucafina1.com',
                     'ibl@sucafina.com',
-                    'james.kayiranga@sucafina.com'
+                    'james.kayiranga@sucafina.com',
+                    'paterne.mugisha@sucafina.com',
+                    'kevin.uwitonze@sucafina.com'
                 ];
 
                 console.log('Sending email to management:', managementEmails);
